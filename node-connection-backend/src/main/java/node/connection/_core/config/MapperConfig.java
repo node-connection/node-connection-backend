@@ -5,14 +5,14 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import node.connection.hyperledger.fabric.ca.CAEnrollment;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class MapperConfig {
 
-    @Bean
+    @Bean("CustomModule")
     public SimpleModule simpleModule() {
         SimpleModule simpleModule = new SimpleModule();
         simpleModule.addSerializer(CAEnrollment.class, new CAEnrollment.Serializer());
@@ -22,7 +22,7 @@ public class MapperConfig {
     }
 
     @Bean
-    public ObjectMapper objectMapper(@Autowired SimpleModule simpleModule) {
+    public ObjectMapper objectMapper(@Qualifier("CustomModule") SimpleModule simpleModule) {
         ObjectMapper objectMapper = new ObjectMapper();
         JavaTimeModule timeModule = new JavaTimeModule();
 

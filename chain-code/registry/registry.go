@@ -90,13 +90,13 @@ func (s *SmartContract) InitLedger(ctx contractapi.TransactionContextInterface) 
 }
 
 // 등기부등본 생성
-func (s *SmartContract) CreateRegistryDocument(ctx contractapi.TransactionContextInterface, document RegistryDocument) error {
+func (s *SmartContract) CreateRegistryDocument(ctx contractapi.TransactionContextInterface, id string, document RegistryDocument) error {
 	documentJSON, err := json.Marshal(document)
 	if err != nil {
 		return fmt.Errorf("failed to marshal document: %v", err)
 	}
 
-	return ctx.GetStub().PutState(document.ID, documentJSON)
+	return ctx.GetStub().PutState(id, documentJSON)
 }
 
 func (s *SmartContract) GetRegistryDocumentByID(ctx contractapi.TransactionContextInterface, id string) (*RegistryDocument, error) {

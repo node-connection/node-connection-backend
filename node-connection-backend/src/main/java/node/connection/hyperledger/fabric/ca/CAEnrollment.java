@@ -2,14 +2,12 @@ package node.connection.hyperledger.fabric.ca;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.*;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
-import node.connection._core.exception.ExceptionStatus;
-import node.connection._core.exception.server.ServerException;
+import node.connection._core.utils.Mapper;
 import org.bouncycastle.util.encoders.Base64;
 import org.hyperledger.fabric.sdk.Enrollment;
 
@@ -60,22 +58,12 @@ public class CAEnrollment implements Enrollment, Serializable {
                 .build();
     }
 
-    public String serialize(ObjectMapper mapper) {
-        try {
-            return mapper.writeValueAsString(this);
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-            throw new ServerException(ExceptionStatus.JSON_PROCESSING_EXCEPTION);
-        }
+    public String serialize(Mapper mapper) {
+        return mapper.writeValueAsString(this);
     }
 
-    public static CAEnrollment deserialize(ObjectMapper mapper, String json) {
-        try {
-            return mapper.readValue(json, CAEnrollment.class);
-        } catch (IOException e) {
-            e.printStackTrace();
-            throw new ServerException(ExceptionStatus.JSON_PROCESSING_EXCEPTION);
-        }
+    public static CAEnrollment deserialize(Mapper mapper, String json) {
+        return mapper.readValue(json, CAEnrollment.class);
     }
 
     public static class Serializer extends JsonSerializer<CAEnrollment> {

@@ -13,6 +13,7 @@ CHANNEL_NAME="$DEFAULT_CHANNEL_NAME"
 CHAINCODE_NAME=""
 CHAINCODE_DIR=""
 LANGUAGE="$DEFAULT_LANGUAGE"
+CHAINCODE_VERSION="1.0.0"
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
@@ -32,6 +33,10 @@ while [[ "$#" -gt 0 ]]; do
             LANGUAGE="$2"
             shift 2
             ;;
+        -ccv|--chaincode-version)
+            CHAINCODE_VERSION="$2"
+            shift 2
+            ;;
         *)
             echo -e "${RED}Unknown parameter passed: $1${NC}"
             exit 1
@@ -48,6 +53,7 @@ echo -e "${BLUE}CHANNEL_NAME: $CHANNEL_NAME${NC}"
 echo -e "${BLUE}CHAINCODE_NAME: $CHAINCODE_NAME${NC}"
 echo -e "${BLUE}CHAINCODE_DIR: $CHAINCODE_DIR${NC}"
 echo -e "${BLUE}LANGUAGE: $LANGUAGE${NC}"
+echo -e "${BLUE}CHAINCODE_VERSION: $CHAINCODE_VERSION${NC}"
 
 if [ -z "$CHAINCODE_NAME" ] || [ -z "$CHAINCODE_DIR" ]; then
     echo -e "${RED}Error: Chaincode name and directory are required.${NC}"
@@ -59,4 +65,4 @@ if [ ! -x "./network/node-connection-network/network.sh" ]; then
     exit 1
 fi
 
-./network/node-connection-network/network.sh deployCC -c "$CHANNEL_NAME" -ccn "$CHAINCODE_NAME" -ccp "$CHAINCODE_DIR" -ccl "$LANGUAGE"
+./network/node-connection-network/network.sh deployCC -c "$CHANNEL_NAME" -ccn "$CHAINCODE_NAME" -ccp "$CHAINCODE_DIR" -ccl "$LANGUAGE" -ccv "$CHAINCODE_VERSION"

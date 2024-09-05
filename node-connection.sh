@@ -9,6 +9,8 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 function setup_requirements() {
+    echo -e "${YELLOW}Checking and installing required software...${NC}"
+
     # Determine the shell type
     SHELL_PROFILE=""
     case "$SHELL" in
@@ -19,7 +21,7 @@ function setup_requirements() {
             SHELL_PROFILE="$HOME/.zshrc"
             ;;
         *)
-            echo "Unsupported shell: $SHELL"
+            echo -e "${RED}Unsupported shell: $SHELL${NC}"
             return 1
             ;;
     esac
@@ -28,7 +30,7 @@ function setup_requirements() {
     if ! command -v go &> /dev/null
     then
         echo -e "${YELLOW}Go is not installed. Installing Go...${NC}"
-        wget https://golang.org/dl/go1.19.1.linux-amd64.tar.gz
+        wget -q https://golang.org/dl/go1.19.1.linux-amd64.tar.gz
         sudo tar -xzf go1.19.1.linux-amd64.tar.gz -C /usr/local/
         # Set up Go environment variables
         if ! grep -q "export PATH=\$PATH:/usr/local/go/bin" "$SHELL_PROFILE"; then
@@ -77,6 +79,8 @@ function setup_requirements() {
 }
 
 function setup_hyperledger_fabric() {
+    echo -e "${YELLOW}Checking and setting up Hyperledger Fabric...${NC}"
+
     if [ ! -d "./network/bin" ] || [ ! -d "./network/builders" ] || [ ! -d "./network/config" ]; then
         echo -e "${YELLOW}Required folders not found in ./network/. Proceeding with setup.${NC}"
 
@@ -99,6 +103,8 @@ function setup_hyperledger_fabric() {
 }
 
 function setup_hyperledger_indy() {
+    echo -e "${YELLOW}Checking and setting up Hyperledger Indy...${NC}"
+
     if [ ! -d "./indy-sdk" ]; then
         echo -e "${YELLOW}The indy-sdk folder does not exist. Proceeding with cloning.${NC}"
 
@@ -111,6 +117,8 @@ function setup_hyperledger_indy() {
 }
 
 function config_org_env() {
+    echo -e "${YELLOW}Configuring organization environment...${NC}"
+
     CONFIG_FILE="hyperledger.organization.config.sh"
     rm -f $CONFIG_FILE
 
@@ -141,7 +149,7 @@ function config_org_env() {
 
     chmod +x $CONFIG_FILE
 
-    echo "Configuration exported to $CONFIG_FILE"
+    echo -e "${GREEN}Configuration exported to $CONFIG_FILE${NC}"
 
     local rc_file
 
@@ -154,7 +162,7 @@ function config_org_env() {
             rc_file="$HOME/.zshrc"
             ;;
         *)
-            echo "Unsupported shell: $SHELL"
+            echo -e "${RED}Unsupported shell: $SHELL${NC}"
             return 1
             ;;
     esac
@@ -165,33 +173,35 @@ function config_org_env() {
 
     # Check if the source command is already in the rc file
     if grep -q "source $config_script" "$rc_file"; then
-        echo "Organization source command already exists in $rc_file."
+        echo -e "${BLUE}Organization source command already exists in $rc_file.${NC}"
     else
         # Append the source command to the rc file
         echo "" >> "$rc_file"
         echo "# Organization source Node Connection Hyperledger configuration script" >> "$rc_file"
         echo "source $config_script" >> "$rc_file"
-        echo "Added source command to $rc_file."
+        echo -e "${GREEN}Added source command to $rc_file.${NC}"
     fi
 
     # Source the file to apply changes immediately
     case "$SHELL" in
         */bash)
             source "$HOME/.bashrc"
-            echo "Organization config sourced $HOME/.bashrc"
+            echo -e "${GREEN}Sourced $HOME/.bashrc${NC}"
             ;;
         */zsh)
             zsh -c "source $HOME/.zshrc"
-            echo "Organization config sourced $HOME/.zshrc"
+            echo -e "${GREEN}Sourced $HOME/.zshrc${NC}"
             ;;
         *)
-            echo "Unsupported shell: $SHELL"
+            echo -e "${RED}Unsupported shell: $SHELL${NC}"
             return 1
             ;;
     esac
 }
 
 function export_config() {
+    echo -e "${YELLOW}Exporting Hyperledger configuration...${NC}"
+
     current_dir=$(pwd)
 
     # Write the configuration to hyperledger.config.sh
@@ -208,12 +218,15 @@ function export_config() {
     # Fabric CA Information
     echo '' >> hyperledger.config.sh
     echo '# Fabric CA Information' >> hyperledger.config.sh
-    echo 'CA_NAME=ca-registry' >> hyperledger.config.sh
-    echo 'CA_URL=http://localhost:7054' >> hyperledger.config.sh
+    echo 'CA_REGISTRY_NAME=ca-registry' >> hyperledger.config.sh
+    echo 'CA_REGISTRY_URL=https://localhost:7054' >> hyperledger.config.sh
+    echo "CA_REGISTRY_PEM=$current_dir/network/node-connection-network/organizations/fabric-ca/registry/ca-cert.pem" >> hyperledger.config.sh
+    echo 'CA_VIEWER_NAME=ca-viewer' >> hyperledger.config.sh
+    echo 'CA_VIEWER_URL=https://localhost:8054' >> hyperledger.config.sh
+    echo "CA_VIEWER_PEM=$current_dir/network/node-connection-network/organizations/fabric-ca/viewer/ca-cert.pem" >> hyperledger.config.sh
     echo 'CA_ADMIN_NAME=admin' >> hyperledger.config.sh
     echo 'CA_ADMIN_PASSWORD=adminpw' >> hyperledger.config.sh
-    echo "CA_PEM=$current_dir/network/node-connection-network/organizations/fabric-ca/registry/ca-cert.pem" >> hyperledger.config.sh
-    echo 'export CA_NAME CA_URL CA_ADMIN_NAME CA_ADMIN_PASSWORD CA_PEM' >> hyperledger.config.sh
+    echo 'export CA_REGISTRY_NAME CA_REGISTRY_URL CA_REGISTRY_PEM CA_VIEWER_NAME CA_VIEWER_PEM CA_VIEWER_URL CA_ADMIN_NAME CA_ADMIN_PASSWORD' >> hyperledger.config.sh
 
     # Fabric User Information
     echo '' >> hyperledger.config.sh
@@ -264,7 +277,7 @@ function export_config() {
             rc_file="$HOME/.zshrc"
             ;;
         *)
-            echo "Unsupported shell: $SHELL"
+            echo -e "${RED}Unsupported shell: $SHELL${NC}"
             return 1
             ;;
     esac
@@ -274,30 +287,88 @@ function export_config() {
 
     # Check if the source command is already in the rc file
     if grep -q "source $config_script" "$rc_file"; then
-        echo "Source command already exists in $rc_file."
+        echo -e "${BLUE}Source command already exists in $rc_file.${NC}"
     else
         # Append the source command to the rc file
         echo "" >> "$rc_file"
         echo "# Source Node Connection Hyperledger configuration script" >> "$rc_file"
         echo "source $config_script" >> "$rc_file"
-        echo "Added source command to $rc_file."
+        echo -e "${GREEN}Added source command to $rc_file.${NC}"
     fi
 
     # Source the file to apply changes immediately
     case "$SHELL" in
         */bash)
             source "$HOME/.bashrc"
-            echo "Sourced $HOME/.bashrc"
+            echo -e "${GREEN}Sourced $HOME/.bashrc${NC}"
             ;;
         */zsh)
             zsh -c "source $HOME/.zshrc"
-            echo "Sourced $HOME/.zshrc"
+            echo -e "${GREEN}Sourced $HOME/.zshrc${NC}"
             ;;
         *)
-            echo "Unsupported shell: $SHELL"
+            echo -e "${RED}Unsupported shell: $SHELL${NC}"
             return 1
             ;;
     esac
+}
+
+function export_backend_env() {
+    local env_file="env.sh"
+    
+    if [[ -f $env_file ]]; then
+        echo -e "${YELLOW}Found $env_file. Exporting environment variables...${NC}"
+        
+        # Source the env.sh file to export its variables
+        source "$env_file"
+        
+        # Check if the environment variables are exported successfully
+        echo -e "${GREEN}Environment variables from $env_file have been exported.${NC}"
+        
+        # Determine the current shell
+        local rc_file
+        case "$SHELL" in
+            */bash)
+                rc_file="$HOME/.bashrc"
+                ;;
+            */zsh)
+                rc_file="$HOME/.zshrc"
+                ;;
+            *)
+                echo -e "${RED}Unsupported shell: $SHELL${NC}"
+                return 1
+                ;;
+        esac
+
+        # Check if the source command is already in the rc file
+        if grep -q "source $PWD/$env_file" "$rc_file"; then
+            echo -e "${BLUE}Source command already exists in $rc_file.${NC}"
+        else
+            # Append the source command to the rc file
+            echo "" >> "$rc_file"
+            echo "# Source environment variables from $env_file" >> "$rc_file"
+            echo "source $PWD/$env_file" >> "$rc_file"
+            echo -e "${GREEN}Added source command to $rc_file.${NC}"
+        fi
+
+        # Source the file to apply changes immediately
+        case "$SHELL" in
+            */bash)
+                source "$HOME/.bashrc"
+                echo -e "${GREEN}Sourced $HOME/.bashrc${NC}"
+                ;;
+            */zsh)
+                zsh -c "source $HOME/.zshrc"
+                echo -e "${GREEN}Sourced $HOME/.zshrc${NC}"
+                ;;
+            *)
+                echo -e "${RED}Unsupported shell: $SHELL${NC}"
+                return 1
+                ;;
+        esac
+    else
+        echo -e "${RED}$env_file not found. No environment variables were exported.${NC}"
+    fi
 }
 
 function start_application() {
@@ -308,21 +379,22 @@ function start_application() {
 
     echo -e "${YELLOW}Checking Hyperledger installation...${NC}"
     setup_hyperledger_fabric
-    setup_hyperledger_indy
+    # setup_hyperledger_indy
 
     echo -e "${YELLOW}Starting node-connection network...${NC}"
     ./node-connection-network.sh up
 
-    echo -e "${YELLOW}Config node-connection network...${NC}"
+    echo -e "${YELLOW}Configuring node-connection network...${NC}"
     config_org_env
 
-    echo -e "${YELLOW}Create default channel...${NC}"
+    echo -e "${YELLOW}Creating default channel...${NC}"
     ./network/node-connection-network/network.sh createChannel -c nodeconnectionchannel
 
-    echo -e "${YELLOW}Export hyperledger network config...${NC}"
+    echo -e "${YELLOW}Exporting Hyperledger network config...${NC}"
     export_config
 
     # TODO: 백엔드 서버 시작
+    export_backend_env
     
     # TODO: 프론트엔드 서버 시작
     echo -e "${GREEN}Starting node-connection application complete.${NC}"

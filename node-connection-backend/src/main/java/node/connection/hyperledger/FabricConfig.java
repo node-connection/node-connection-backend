@@ -7,6 +7,11 @@ import org.springframework.stereotype.Component;
 @Component
 @Getter
 public class FabricConfig {
+
+    private String registryChainCodeVersion = "1.0.0";
+
+    private String courtChainCodeVersion = "1.0.2";
+
     @Value("${hyperledger.fabric.ca.registry.name}")
     private String registryCaName;
 
@@ -69,4 +74,12 @@ public class FabricConfig {
 
     @Value("${hyperledger.fabric.channel.name}")
     private String channelName;
+
+    public void setRegistryChainCodeVersion(String version) {
+        this.registryChainCodeVersion = version;
+    }
+
+    public void setCourtChainCodeVersion(String version) {
+        this.courtChainCodeVersion = version;
+    }
 }

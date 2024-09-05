@@ -1,7 +1,7 @@
 package node.connection.hyperledger.fabric;
 
 import lombok.*;
-import node.connection.entity.FabricRegister;
+import node.connection.entity.UserAccount;
 import node.connection.hyperledger.fabric.ca.CAEnrollment;
 import org.hyperledger.fabric.sdk.User;
 
@@ -56,7 +56,7 @@ public class Client implements User {
         this.enrollment = enrollment;
     }
 
-    public static Client of(FabricRegister register, CAEnrollment enrollment) {
+    public static Client of(UserAccount register, CAEnrollment enrollment) {
         return Client.builder()
                 .name(register.getName())
                 .mspId(register.getMspId())
