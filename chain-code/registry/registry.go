@@ -7,7 +7,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
 
@@ -18,8 +17,8 @@ type SmartContract struct {
 // 부동산 등기부등본 (Registry Document)
 type RegistryDocument struct {
 	ID                       string                     `json:"id"`                       // 등기부등본 ID
-	TitleSection             []TitleSection             `json:"titleSection"`             // 표제부
-	ExclusivePartDescription []ExclusivePartDescription `json:"exclusivePartDescription"` // 전유부분의 건물의 표시
+	TitleSection             TitleSection               `json:"titleSection"`             // 표제부
+	ExclusivePartDescription ExclusivePartDescription   `json:"exclusivePartDescription"` // 전유부분의 건물의 표시
 	FirstSection             []FirstSection             `json:"firstSection"`             // 갑구
 	SecondSection            []SecondSection            `json:"secondSection"`            // 을구
 }
@@ -32,47 +31,55 @@ type TitleSection struct {
 
 type BuildingDescription struct {
 	DisplayNumber            string    `json:"displayNumber"`            // 표시번호
-	ReceiptDate              time.Time `json:"receiptDate"`              // 접수
+	ReceiptDate              string    `json:"receiptDate"`              // 접수
 	LocationNumber           string    `json:"locationNumber"`           // 소재지번, 건물명칭 및 번호
 	BuildingDetails          string    `json:"buildingDetails"`          // 건물내역
 	RegistrationCause        string    `json:"registrationCause"`        // 등기원인 및 기타사항
-	LocationNumberAlternate  string    `json:"locationNumberAlternate"`  // 소재지번 (Alternate field)
 }
 
 type LandDescription struct {
 	DisplayNumber            string    `json:"displayNumber"`            // 표시번호
+	LocationNumber           string    `json:"locationNumber"`           // 소재지번, 건물명칭 및 번호
 	LandType                 string    `json:"landType"`                 // 지목
-	Area                     float64   `json:"area"`                     // 면적
+	Area                     string    `json:"area"`                     // 면적
 	RegistrationCause        string    `json:"registrationCause"`        // 등기원인 및 기타사항
 }
 
 // 전유부분의 건물의 표시 (Exclusive Part of the Building)
 type ExclusivePartDescription struct {
-	BuildingDescription      []BuildingDescription      `json:"buildingDescription"`      // 전유부분의 건물의 표시
-	LandRightDescription     []LandRightDescription     `json:"landRightDescription"`     // 대지권의 표시
+	BuildingPartDescription  []BuildingPartDescription  `json:"buildingPartDescription"`  // 전유부분의 건물의 표시
+	LandRightDescription     []LandRightDescription     `json:"landRightDescription"` // 대지권의 표시
+}
+
+type BuildingPartDescription struct {
+	DisplayNumber            string    `json:"displayNumber"`            // 표시번호
+	ReceiptDate              string    `json:"receiptDate"`              // 접수
+	PartNumber               string    `json:"partNumber"`               // 건물번호
+	BuildingDetails          string    `json:"buildingDetails"`          // 건물내역
+	RegistrationCause        string    `json:"registrationCause"`        // 등기원인 및 기타사항
 }
 
 type LandRightDescription struct {
 	DisplayNumber            string    `json:"displayNumber"`            // 표시번호
 	LandRightType            string    `json:"landRightType"`            // 대지권의 종류
-	LandRightRatio           float64   `json:"landRightRatio"`           // 대지권 비율
+	LandRightRatio           string    `json:"landRightRatio"`           // 대지권 비율
 	RegistrationCause        string    `json:"registrationCause"`        // 등기원인 및 기타사항
 }
 
 // 갑구 (First Section)
 type FirstSection struct {
-	RankNumber               int       `json:"rankNumber"`               // 순위번호
+	RankNumber               string    `json:"rankNumber"`               // 순위번호
 	RegistrationPurpose      string    `json:"registrationPurpose"`      // 등기목적
-	ReceiptDate              time.Time `json:"receiptDate"`              // 접수
+	ReceiptDate              string    `json:"receiptDate"`              // 접수
 	RegistrationCause        string    `json:"registrationCause"`        // 등기원인
 	HolderAndAdditionalInfo  string    `json:"holderAndAdditionalInfo"`  // 권리자 및 기타사항
 }
 
 // 을구 (Second Section)
 type SecondSection struct {
-	RankNumber               int       `json:"rankNumber"`               // 순위번호
+	RankNumber               string    `json:"rankNumber"`               // 순위번호
 	RegistrationPurpose      string    `json:"registrationPurpose"`      // 등기목적
-	ReceiptDate              time.Time `json:"receiptDate"`              // 접수
+	ReceiptDate              string    `json:"receiptDate"`              // 접수
 	RegistrationCause        string    `json:"registrationCause"`        // 등기원인
 	HolderAndAdditionalInfo  string    `json:"holderAndAdditionalInfo"`  // 권리자 및 기타사항
 }
@@ -83,13 +90,13 @@ func (s *SmartContract) InitLedger(ctx contractapi.TransactionContextInterface) 
 }
 
 // 등기부등본 생성
-func (s *SmartContract) CreateRegistryDocument(ctx contractapi.TransactionContextInterface, document RegistryDocument) error {
+func (s *SmartContract) CreateRegistryDocument(ctx contractapi.TransactionContextInterface, id string, document RegistryDocument) error {
 	documentJSON, err := json.Marshal(document)
 	if err != nil {
 		return fmt.Errorf("failed to marshal document: %v", err)
 	}
 
-	return ctx.GetStub().PutState(document.ID, documentJSON)
+	return ctx.GetStub().PutState(id, documentJSON)
 }
 
 func (s *SmartContract) GetRegistryDocumentByID(ctx contractapi.TransactionContextInterface, id string) (*RegistryDocument, error) {
@@ -110,59 +117,43 @@ func (s *SmartContract) GetRegistryDocumentByID(ctx contractapi.TransactionConte
 	return &document, nil
 }
 
-func (s *SmartContract) AddBuildingDescriptionToTitleSection(ctx contractapi.TransactionContextInterface, id string, sectionIndex int, buildingDesc BuildingDescription) error {
+func (s *SmartContract) AddBuildingDescriptionToTitleSection(ctx contractapi.TransactionContextInterface, id string, buildingDesc BuildingDescription) error {
 	document, err := s.GetRegistryDocumentByID(ctx, id)
 	if err != nil {
 		return err
 	}
 
-	if sectionIndex >= len(document.TitleSection) {
-		return fmt.Errorf("TitleSection index %d out of range", sectionIndex)
-	}
-
-	document.TitleSection[sectionIndex].BuildingDescription = append(document.TitleSection[sectionIndex].BuildingDescription, buildingDesc)
+	document.TitleSection.BuildingDescription = append(document.TitleSection.BuildingDescription, buildingDesc)
 	return s.updateRegistryDocument(ctx, document)
 }
 
-func (s *SmartContract) AddLandDescriptionToTitleSection(ctx contractapi.TransactionContextInterface, id string, sectionIndex int, landDesc LandDescription) error {
+func (s *SmartContract) AddLandDescriptionToTitleSection(ctx contractapi.TransactionContextInterface, id string, landDesc LandDescription) error {
 	document, err := s.GetRegistryDocumentByID(ctx, id)
 	if err != nil {
 		return err
 	}
 
-	if sectionIndex >= len(document.TitleSection) {
-		return fmt.Errorf("TitleSection index %d out of range", sectionIndex)
-	}
-
-	document.TitleSection[sectionIndex].LandDescription = append(document.TitleSection[sectionIndex].LandDescription, landDesc)
+	document.TitleSection.LandDescription = append(document.TitleSection.LandDescription, landDesc)
 	return s.updateRegistryDocument(ctx, document)
 }
 
-func (s *SmartContract) AddBuildingDescriptionToExclusivePart(ctx contractapi.TransactionContextInterface, id string, partIndex int, buildingDesc BuildingDescription) error {
+func (s *SmartContract) AddBuildingDescriptionToExclusivePart(ctx contractapi.TransactionContextInterface, id string, buildingDesc BuildingPartDescription) error {
 	document, err := s.GetRegistryDocumentByID(ctx, id)
 	if err != nil {
 		return err
 	}
 
-	if partIndex >= len(document.ExclusivePartDescription) {
-		return fmt.Errorf("ExclusivePartDescription index %d out of range", partIndex)
-	}
-
-	document.ExclusivePartDescription[partIndex].BuildingDescription = append(document.ExclusivePartDescription[partIndex].BuildingDescription, buildingDesc)
+	document.ExclusivePartDescription.BuildingPartDescription = append(document.ExclusivePartDescription.BuildingPartDescription, buildingDesc)
 	return s.updateRegistryDocument(ctx, document)
 }
 
-func (s *SmartContract) AddLandRightDescriptionToExclusivePart(ctx contractapi.TransactionContextInterface, id string, partIndex int, landRightDesc LandRightDescription) error {
+func (s *SmartContract) AddLandRightDescriptionToExclusivePart(ctx contractapi.TransactionContextInterface, id string, landRightDesc LandRightDescription) error {
 	document, err := s.GetRegistryDocumentByID(ctx, id)
 	if err != nil {
 		return err
 	}
 
-	if partIndex >= len(document.ExclusivePartDescription) {
-		return fmt.Errorf("ExclusivePartDescription index %d out of range", partIndex)
-	}
-
-	document.ExclusivePartDescription[partIndex].LandRightDescription = append(document.ExclusivePartDescription[partIndex].LandRightDescription, landRightDesc)
+	document.ExclusivePartDescription.LandRightDescription = append(document.ExclusivePartDescription.LandRightDescription, landRightDesc)
 	return s.updateRegistryDocument(ctx, document)
 }
 

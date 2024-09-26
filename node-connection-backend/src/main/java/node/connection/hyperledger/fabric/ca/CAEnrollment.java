@@ -3,22 +3,19 @@ package node.connection.hyperledger.fabric.ca;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.*;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import node.connection._core.utils.Mapper;
 import org.bouncycastle.util.encoders.Base64;
 import org.hyperledger.fabric.sdk.Enrollment;
 
-import javax.xml.bind.DatatypeConverter;
-import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.io.IOException;
+import java.io.Serializable;
+import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
-import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
-import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Objects;
 
@@ -27,8 +24,6 @@ import java.util.Objects;
 @Setter
 @ToString
 public class CAEnrollment implements Enrollment, Serializable {
-
-    private static final long SERIAL_VERSION_UID = -5258228498456276306L;
 
     private PrivateKey key;
     private String cert;
@@ -63,96 +58,51 @@ public class CAEnrollment implements Enrollment, Serializable {
                 .build();
     }
 
-    public String serialize() throws IOException {
-        ObjectMapper mapper = new ObjectMapper();
-        SimpleModule module = new SimpleModule();
-        module.addSerializer(CAEnrollment.class, new Serializer());
-        mapper.registerModule(module);
-        return Base64.toBase64String(mapper.writeValueAsBytes(this));
+    public String serialize(Mapper mapper) {
+        return mapper.writeValueAsString(this);
     }
 
-    public static CAEnrollment deserialize(String base64) throws IOException, ClassNotFoundException {
-        ObjectMapper mapper = new ObjectMapper();
-        SimpleModule module = new SimpleModule();
-        module.addDeserializer(CAEnrollment.class, new DeSerializer());
-        mapper.registerModule(module);
-        return mapper.readValue(Base64.decode(base64), CAEnrollment.class);
-    }
-
-    public static CAEnrollment fromFile(String keyFilePath, String certFilePath)
-            throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
-
-        PrivateKey key;
-        String certificate;
-
-        try (InputStream isKey = new FileInputStream(keyFilePath);
-             BufferedReader brKey = new BufferedReader(new InputStreamReader(isKey))) {
-
-            StringBuilder keyBuilder = new StringBuilder();
-
-            for (String line = brKey.readLine(); line != null; line = brKey.readLine()) {
-                if (!line.contains("PRIVATE")) {
-                    keyBuilder.append(line);
-                }
-            }
-
-            certificate = new String(Files.readAllBytes(Paths.get(certFilePath)));
-
-            byte[] encoded = DatatypeConverter.parseBase64Binary(keyBuilder.toString());
-            PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(encoded);
-            KeyFactory kf = KeyFactory.getInstance("EC");
-            key = kf.generatePrivate(keySpec);
-        }
-
-        return CAEnrollment.builder()
-                .key(key)
-                .cert(certificate)
-                .build();
-
+    public static CAEnrollment deserialize(Mapper mapper, String json) {
+        return mapper.readValue(json, CAEnrollment.class);
     }
 
     public static class Serializer extends JsonSerializer<CAEnrollment> {
         @Override
         public void serialize(CAEnrollment value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
             gen.writeStartObject();
-            gen.writeStringField("key", serialize(value.getKey()));
+            gen.writeStringField("key", serializePrivateKey(value.getKey()));
             gen.writeStringField("cert", value.getCert());
             gen.writeEndObject();
         }
 
-        public String serialize(PrivateKey key) throws IOException {
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            ObjectOutputStream oos = new ObjectOutputStream(bos);
-            oos.writeObject(key);
-            oos.flush();
-            byte[] data = bos.toByteArray();
-            bos.close();
-            return Base64.toBase64String(data);
+        private String serializePrivateKey(PrivateKey key) {
+            byte[] encodedKey = key.getEncoded();
+            return java.util.Base64.getEncoder().encodeToString(encodedKey);
         }
     }
 
     public static class DeSerializer extends JsonDeserializer<CAEnrollment> {
 
         @Override
-        public CAEnrollment deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+        public CAEnrollment deserialize(JsonParser p, DeserializationContext context) throws IOException {
             JsonNode node = p.readValueAsTree();
             String key = node.get("key").asText();
             String cert = node.get("cert").asText();
             try {
                 return CAEnrollment.builder()
-                        .key(deserialize(key))
+                        .key(deserializePrivateKey(key))
                         .cert(cert)
                         .build();
-            } catch (ClassNotFoundException e) {
-                throw new IOException(e.getMessage());
+            } catch (GeneralSecurityException e) {
+                throw new IOException(e.getMessage(), e);
             }
         }
 
-        PrivateKey deserialize(String key) throws IOException, ClassNotFoundException {
-            byte[] data = Base64.decode(key);
-            ByteArrayInputStream bis = new ByteArrayInputStream(data);
-            ObjectInputStream ois = new ObjectInputStream(bis);
-            return (PrivateKey) ois.readObject();
+        private PrivateKey deserializePrivateKey(String key) throws GeneralSecurityException {
+            byte[] decodedKey = Base64.decode(key);
+            PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(decodedKey);
+            KeyFactory keyFactory = KeyFactory.getInstance("EC"); // 혹은 "RSA" 또는 사용 중인 알고리즘
+            return keyFactory.generatePrivate(keySpec);
         }
     }
 }

@@ -1,14 +1,12 @@
 package node.connection.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import node.connection._core.exception.ExceptionStatus;
-import node.connection._core.exception.server.ServerException;
-import node.connection.data.registry.RegistryDocument;
-import node.connection.hyperledger.FabricService;
+import node.connection._core.security.CustomUserDetails;
+import node.connection._core.utils.Mapper;
+import node.connection.dto.registry.RegistryDocumentDto;
+import node.connection.hyperledger.FabricConfig;
+import node.connection.hyperledger.fabric.FabricConnector;
 import node.connection.hyperledger.fabric.FabricProposalResponse;
-import node.connection.hyperledger.indy.IndyConnector;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -18,45 +16,31 @@ import java.util.List;
 @Slf4j
 public class RegistryService {
 
-    private final IndyConnector indyConnector;
-
     private final FabricService fabricService;
 
-    private final ObjectMapper objectMapper;
+    private final FabricConfig fabricConfig;
+
+    private final Mapper objectMapper;
+
 
     public RegistryService(
-            @Autowired IndyConnector indyConnector,
             @Autowired FabricService fabricService,
-            @Autowired ObjectMapper objectMapper
+            @Autowired FabricConfig fabricConfig,
+            @Autowired Mapper objectMapper
     ) {
-        this.indyConnector = indyConnector;
         this.fabricService = fabricService;
+        this.fabricConfig = fabricConfig;
         this.objectMapper = objectMapper;
     }
 
-    public void createRegistryDocument(RegistryDocument document) {
-        try {
-            String documentToJson = objectMapper.writeValueAsString(document);
-            List<String> params = List.of(documentToJson);
-            this.fabricService.setChaincode("registry", "1.0.0");
-            FabricProposalResponse response = this.fabricService.invoke("CreateRegistryDocument", params);
-            log.debug(String.valueOf(response));
-        } catch (JsonProcessingException e) {
-            throw new ServerException(ExceptionStatus.JSON_PROCESSING_EXCEPTION);
-        }
-    }
+    public RegistryDocumentDto getRegistryDocumentById(CustomUserDetails userDetails, String id) {
+        FabricConnector connector = this.fabricService.getConnectorById(userDetails.getUsername());
 
-    public RegistryDocument getRegistryDocumentById(String id) {
         List<String> params = List.of(id);
-        this.fabricService.setChaincode("registry", "1.0.0");
-        FabricProposalResponse response = this.fabricService.invoke("GetRegistryDocumentByID", params);
-        log.debug(String.valueOf(response));
+        connector.setChaincode("registry", this.fabricConfig.getRegistryChainCodeVersion());
+        FabricProposalResponse response = connector.query("GetRegistryDocumentByID", params);
 
         String payload = response.getPayload();
-        try {
-            return objectMapper.readValue(payload, RegistryDocument.class);
-        } catch (JsonProcessingException e) {
-            throw new ServerException(ExceptionStatus.JSON_PROCESSING_EXCEPTION);
-        }
+        return this.objectMapper.readValue(payload, RegistryDocumentDto.class);
     }
 }

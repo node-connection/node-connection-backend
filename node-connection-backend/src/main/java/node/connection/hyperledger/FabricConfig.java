@@ -4,21 +4,31 @@ import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
-
 @Component
 @Getter
 public class FabricConfig {
-    private final String mspFolder = "./msp";
 
-    @Value("${hyperledger.fabric.ca.name}")
-    private String caName;
+    private String registryChainCodeVersion = "1.0.0";
 
-    @Value("${hyperledger.fabric.ca.url}")
-    private String caUrl;
+    private String courtChainCodeVersion = "1.0.2";
 
-    @Value("${hyperledger.fabric.ca.pem}")
-    private String caPemFilePath;
+    @Value("${hyperledger.fabric.ca.registry.name}")
+    private String registryCaName;
+
+    @Value("${hyperledger.fabric.ca.registry.url}")
+    private String registryCaUrl;
+
+    @Value("${hyperledger.fabric.ca.registry.pem}")
+    private String registryCaPemFilePath;
+
+    @Value("${hyperledger.fabric.ca.viewer.name}")
+    private String viewerCaName;
+
+    @Value("${hyperledger.fabric.ca.viewer.url}")
+    private String viewerCaUrl;
+
+    @Value("${hyperledger.fabric.ca.viewer.pem}")
+    private String viewerCaPemFilePath;
 
     @Value("${hyperledger.fabric.ca.admin.name}")
     private String caAdminName;
@@ -26,14 +36,14 @@ public class FabricConfig {
     @Value("${hyperledger.fabric.ca.admin.password}")
     private String caAdminSecret;
 
-    @Value("${hyperledger.fabric.user.msp}")
-    private String userMspId;
+    @Value("${hyperledger.fabric.root.msp}")
+    private String rootMsp;
 
-    @Value("${hyperledger.fabric.user.affiliation}")
-    private String userAffiliation;
+    @Value("${hyperledger.fabric.root.number}")
+    private String rootNumber;
 
-    private final String user1MspName = "user1.json";
-    private final String user1MspPath = mspFolder + File.separator + user1MspName;
+    @Value("${hyperledger.fabric.root.password}")
+    private String rootPassword;
 
     @Value("${hyperledger.fabric.organization.registry.name}")
     private String registryName;
@@ -64,4 +74,12 @@ public class FabricConfig {
 
     @Value("${hyperledger.fabric.channel.name}")
     private String channelName;
+
+    public void setRegistryChainCodeVersion(String version) {
+        this.registryChainCodeVersion = version;
+    }
+
+    public void setCourtChainCodeVersion(String version) {
+        this.courtChainCodeVersion = version;
+    }
 }
