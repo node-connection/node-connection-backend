@@ -8,9 +8,16 @@ import org.springframework.stereotype.Component;
 @Getter
 public class FabricConfig {
 
+    public static String ISSUANCE_CHAIN_CODE = "issuance";
+
+    public static String REGISTRY_CHAIN_CODE = "registry";
+
     private String registryChainCodeVersion = "1.0.0";
 
-    private String courtChainCodeVersion = "1.0.2";
+    private String issuanceChainCodeVersion = "1.0.0";
+
+    @Value("${hyperledger.fabric.pem}")
+    private String pemFilePath;
 
     @Value("${hyperledger.fabric.ca.registry.name}")
     private String registryCaName;
@@ -79,7 +86,7 @@ public class FabricConfig {
         this.registryChainCodeVersion = version;
     }
 
-    public void setCourtChainCodeVersion(String version) {
-        this.courtChainCodeVersion = version;
+    public void setIssuanceChainCodeVersion(String version) {
+        this.issuanceChainCodeVersion = version;
     }
 }

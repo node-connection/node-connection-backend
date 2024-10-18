@@ -22,7 +22,7 @@ public record CustomUserDetails(UserAccount userAccount) implements UserDetails 
 
     @Override
     public String getUsername() {
-        return userAccount.getName();
+        return userAccount.getFabricId();
     }
 
     public UserAccount getUserAccount() {

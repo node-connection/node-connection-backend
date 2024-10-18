@@ -1,2 +1,10 @@
 /indy-sdk/
 
+/node-connection-backend/build
+/node-connection-backend/.gradle
+
+/node-connection-backend/src/main/resources/application-local.yaml
+
+/chain-code/**/vendor
+/chain-code/**/go.*
+

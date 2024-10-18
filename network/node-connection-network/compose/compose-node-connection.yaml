@@ -18,6 +18,7 @@ services:
   orderer.node.connection:
     container_name: orderer.node.connection
     image: hyperledger/fabric-orderer:latest
+    restart: always
     labels:
       service: hyperledger-fabric
     environment:
@@ -60,6 +61,7 @@ services:
   peer0.registry.node.connection:
     container_name: peer0.registry.node.connection
     image: hyperledger/fabric-peer:latest
+    restart: always
     labels:
       service: hyperledger-fabric
     environment:
@@ -99,6 +101,7 @@ services:
   peer0.viewer.node.connection:
     container_name: peer0.viewer.node.connection
     image: hyperledger/fabric-peer:latest
+    restart: always
     labels:
       service: hyperledger-fabric
     environment:

@@ -58,7 +58,7 @@ public class Client implements User {
 
     public static Client of(UserAccount register, CAEnrollment enrollment) {
         return Client.builder()
-                .name(register.getName())
+                .name(register.getFabricId())
                 .mspId(register.getMspId())
                 .enrollment(enrollment)
                 .build();

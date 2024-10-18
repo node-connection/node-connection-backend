@@ -9,6 +9,7 @@ import node.connection._core.security.JweDecoder;
 import node.connection._core.security.JwtAuthenticationFilter;
 import node.connection._core.security.JwtExceptionFilter;
 import node.connection.repository.UserAccountRepository;
+import node.connection.service.FabricService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
@@ -24,6 +25,7 @@ import org.springframework.security.config.annotation.web.configurers.HeadersCon
 import org.springframework.security.config.annotation.web.configurers.HttpBasicConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
@@ -38,13 +40,18 @@ public class SecurityConfig {
 
     private final ExceptionResponseWriter responseWriter;
 
+    private final PasswordEncoder passwordEncoder;
+
+
     public SecurityConfig(@Autowired JweDecoder jweDecoder,
                           @Autowired UserAccountRepository userAccountRepository,
-                          @Autowired ExceptionResponseWriter responseWriter
+                          @Autowired ExceptionResponseWriter responseWriter,
+                          @Autowired PasswordEncoder passwordEncoder
     ) {
         this.jweDecoder = jweDecoder;
         this.userAccountRepository = userAccountRepository;
         this.responseWriter = responseWriter;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Bean
@@ -68,12 +75,6 @@ public class SecurityConfig {
     }
 
     @Bean
-    public BCryptPasswordEncoder bCryptPasswordEncoder() {
-
-        return new BCryptPasswordEncoder();
-    }
-
-    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.headers((headers) -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin));
 
@@ -88,7 +89,7 @@ public class SecurityConfig {
         http.httpBasic(HttpBasicConfigurer::disable);
 
         http.addFilterBefore(
-                new JwtAuthenticationFilter(authenticationManager(http.getSharedObject(AuthenticationConfiguration.class)), jweDecoder, userAccountRepository),
+                new JwtAuthenticationFilter(authenticationManager(http.getSharedObject(AuthenticationConfiguration.class)), jweDecoder, userAccountRepository, passwordEncoder),
                 UsernamePasswordAuthenticationFilter.class
         );
 

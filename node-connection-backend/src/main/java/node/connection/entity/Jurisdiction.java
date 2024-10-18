@@ -1,13 +1,12 @@
 package node.connection.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import node.connection.dto.root.request.CourtCreateRequest;
 import node.connection.entity.pk.CourtKey;
+import node.connection.entity.pk.JurisdictionKey;
 
 import java.time.LocalDateTime;
 
@@ -16,9 +15,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class Jurisdiction {
     @Id
-    private String jurisdiction;
+    private JurisdictionKey key;
 
-    @ManyToOne
+    @ManyToOne(cascade = CascadeType.ALL)
     private Court court;
 
     @Column(nullable = false, columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP")
@@ -28,17 +27,29 @@ public class Jurisdiction {
     private LocalDateTime updatedAt;
 
     @Builder
-    public Jurisdiction(String jurisdiction, Court court, LocalDateTime createdAt, LocalDateTime updatedAt) {
-        this.jurisdiction = jurisdiction;
+    public Jurisdiction(JurisdictionKey key, Court court) {
+        this.key = key;
         this.court = court;
-        this.createdAt = createdAt == null ? LocalDateTime.now() : createdAt;
-        this.updatedAt = updatedAt == null ? LocalDateTime.now() : updatedAt;
     }
 
-    public static Jurisdiction of(String jurisdiction, Court court) {
-        return Jurisdiction.builder()
-                .jurisdiction(jurisdiction)
-                .court(court)
+    @PrePersist
+    protected void onCreated() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected  void onUpdated() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public static Jurisdiction of(String city, String district, Court court) {
+        JurisdictionKey newKey = JurisdictionKey.builder()
+                .city(city)
+                .district(district)
                 .build();
+
+        return new Jurisdiction(newKey, court);
     }
 }

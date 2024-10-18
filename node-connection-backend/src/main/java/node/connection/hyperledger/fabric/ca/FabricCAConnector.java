@@ -8,7 +8,10 @@ import org.hyperledger.fabric.sdk.Enrollment;
 import org.hyperledger.fabric.sdk.User;
 import org.hyperledger.fabric.sdk.exception.CryptoException;
 import org.hyperledger.fabric.sdk.security.CryptoSuite;
-import org.hyperledger.fabric_ca.sdk.*;
+import org.hyperledger.fabric_ca.sdk.Attribute;
+import org.hyperledger.fabric_ca.sdk.HFCAClient;
+import org.hyperledger.fabric_ca.sdk.HFCAInfo;
+import org.hyperledger.fabric_ca.sdk.RegistrationRequest;
 import org.hyperledger.fabric_ca.sdk.exception.*;
 
 import java.lang.reflect.InvocationTargetException;
@@ -98,7 +101,7 @@ public class FabricCAConnector {
     }
 
     public Enrollment enroll(UserAccount register) {
-        return this.enroll(register.getName(), register.getSecret());
+        return this.enroll(register.getFabricId(), register.getSecret());
     }
 
     public Enrollment enroll(String name, String secret) {

@@ -50,10 +50,8 @@ public class FabricConnector {
     public Channel connectToChannel(NetworkConfig networkConfig, String channelName) {
         Channel channel = channelManager.get(channelName);
         if (channel == null) {
-            log.debug("{} 채널에 연결 시도", channelName);
             channel = hfClient.getChannel(channelName);
             if (channel == null) {
-                log.debug("{} 채널 연결 실패, 채널 생성", channelName);
                 channel = createChannel(networkConfig, channelName);
             }
             channelManager.put(channel);

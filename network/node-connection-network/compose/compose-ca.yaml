@@ -12,6 +12,7 @@ networks:
 services:
   ca_registry:
     image: hyperledger/fabric-ca:latest
+    restart: always
     labels:
       service: hyperledger-fabric
     environment:
@@ -32,6 +33,7 @@ services:
 
   ca_viewer:
     image: hyperledger/fabric-ca:latest
+    restart: always
     labels:
       service: hyperledger-fabric
     environment:
@@ -52,6 +54,7 @@ services:
 
   ca_orderer:
     image: hyperledger/fabric-ca:latest
+    restart: always
     labels:
       service: hyperledger-fabric
     environment:

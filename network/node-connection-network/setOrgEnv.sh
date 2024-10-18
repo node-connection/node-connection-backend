@@ -22,14 +22,14 @@ PEER0_REGISTRY_CA=${DIR}/node-connection-network/organizations/peerOrganizations
 PEER0_VIEWER_CA=${DIR}/node-connection-network/organizations/peerOrganizations/viewer.node.connection/tlsca/tlsca.viewer.node.connection-cert.pem
 PEER0_ORG3_CA=${DIR}/node-connection-network/organizations/peerOrganizations/org3.node.connection/tlsca/tlsca.org3.node.connection-cert.pem
 
-if [[ ${ORG,,} == "registry" || ${ORG,,} == "digibank" ]]; then
+if [[ ${ORG,,} == "Registry" || ${ORG,,} == "registry" || ${ORG,,} == "digibank" ]]; then
 
    CORE_PEER_LOCALMSPID=RegistryMSP
    CORE_PEER_MSPCONFIGPATH=${DIR}/node-connection-network/organizations/peerOrganizations/registry.node.connection/users/Admin@registry.node.connection/msp
    CORE_PEER_ADDRESS=localhost:7051
    CORE_PEER_TLS_ROOTCERT_FILE=${DIR}/node-connection-network/organizations/peerOrganizations/registry.node.connection/tlsca/tlsca.registry.node.connection-cert.pem
 
-elif [[ ${ORG,,} == "viewer" || ${ORG,,} == "magnetocorp" ]]; then
+elif [[ ${ORG,,} == "Viewer" || ${ORG,,} == "viewer" || ${ORG,,} == "magnetocorp" ]]; then
 
    CORE_PEER_LOCALMSPID=ViewerMSP
    CORE_PEER_MSPCONFIGPATH=${DIR}/node-connection-network/organizations/peerOrganizations/viewer.node.connection/users/Admin@viewer.node.connection/msp

@@ -24,6 +24,10 @@ public class NetworkConfig {
         node = builder.node;
     }
 
+    public void addPeer(FabricPeer peer) {
+        this.peers.add(peer.toNode());
+    }
+
     public static final class Builder {
         private String channelName;
         private List<Node> peers = new ArrayList<>();

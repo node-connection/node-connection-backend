@@ -1,0 +1,10 @@
+[
+  {
+    "name": "IssuerInfoCollection",
+    "policy": "OR('RegistryMSP.member')",
+    "requiredPeerCount": 1,
+    "maxPeerCount": 2,
+    "blockToLive": 1000000,
+    "memberOnlyRead": true
+  }
+]
