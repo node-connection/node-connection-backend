@@ -1,36 +1,33 @@
 package node.connection.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.extern.slf4j.Slf4j;
 import node.connection._core.exception.ExceptionStatus;
+import node.connection._core.exception.client.BadRequestException;
 import node.connection._core.exception.server.ServerException;
 import node.connection._core.security.CustomUserDetails;
+import node.connection._core.utils.AccessControl;
 import node.connection._core.utils.Mapper;
-import node.connection.data.court.CourtRequest;
-import node.connection.data.registry.RegistryBuilder;
-import node.connection.data.registry.RegistryDocument;
-import node.connection.dto.court.request.AddCourtMemberRequest;
-import node.connection.dto.court.request.CourtCreateRequest;
-import node.connection.dto.court.request.DeleteCourtMemberRequest;
-import node.connection.dto.court.request.FinalizeCourtRequest;
-import node.connection.dto.court.response.FabricCourt;
-import node.connection.dto.court.response.FabricCourtRequest;
-import node.connection.dto.registry.RegistryDocumentDto;
-import node.connection.dto.registry.request.*;
+import node.connection.data.*;
+import node.connection.dto.registry.*;
+import node.connection.dto.root.request.CourtCreateRequest;
 import node.connection.entity.Court;
 import node.connection.entity.Jurisdiction;
+import node.connection.entity.RegistryDocumentIndex;
+import node.connection.entity.UserAccount;
+import node.connection.entity.pk.AddressIndexKey;
 import node.connection.hyperledger.FabricConfig;
 import node.connection.hyperledger.fabric.FabricConnector;
 import node.connection.hyperledger.fabric.FabricProposalResponse;
+import node.connection.hyperledger.fabric.NetworkConfig;
 import node.connection.repository.CourtRepository;
 import node.connection.repository.JurisdictionRepository;
+import node.connection.repository.RegistryDocumentIndexRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 @Slf4j
@@ -44,9 +41,13 @@ public class CourtService {
 
     private final JurisdictionRepository jurisdictionRepository;
 
+    private final RegistryDocumentIndexRepository registryDocumentIndexRepository;
+
+    private final RegistryDocumentBuilder documentBuilder;
+
     private final Mapper objectMapper;
 
-    private final RegistryBuilder registryBuilder;
+    private final AccessControl accessControl;
 
 
     public CourtService(
@@ -54,286 +55,236 @@ public class CourtService {
             @Autowired FabricConfig fabricConfig,
             @Autowired CourtRepository courtRepository,
             @Autowired JurisdictionRepository jurisdictionRepository,
+            @Autowired RegistryDocumentIndexRepository registryDocumentIndexRepository,
+            @Autowired RegistryDocumentBuilder documentBuilder,
             @Autowired Mapper objectMapper,
-            @Autowired RegistryBuilder registryBuilder
+            @Autowired AccessControl accessControl
     ) {
         this.fabricService = fabricService;
         this.fabricConfig = fabricConfig;
         this.courtRepository = courtRepository;
         this.jurisdictionRepository = jurisdictionRepository;
+        this.registryDocumentIndexRepository = registryDocumentIndexRepository;
+        this.documentBuilder = documentBuilder;
         this.objectMapper = objectMapper;
-        this.registryBuilder = registryBuilder;
+        this.accessControl = accessControl;
     }
 
     @Transactional
     public void createCourt(CustomUserDetails userDetails, CourtCreateRequest request) {
-        String courtId = request.getCourtId();
+        this.accessControl.hasRootRole(userDetails);
 
         Court court = Court.of(request);
         this.courtRepository.save(court);
 
         List<Jurisdiction> jurisdictions = new ArrayList<>();
-        request.getJurisdictions().forEach(jurisdiction -> {
-            jurisdictions.add(Jurisdiction.of(jurisdiction, court));
-        });
+        request.districts().forEach(district -> jurisdictions.add(Jurisdiction.of(request.city(), district, court)));
         this.jurisdictionRepository.saveAll(jurisdictions);
 
-        FabricConnector connector = this.fabricService.getConnectorById(userDetails.getUsername());
-        connector.setChaincode("court", this.fabricConfig.getCourtChainCodeVersion());
-
-        List<String> params = List.of(
-                courtId,
-                request.getCourt(),
-                request.getSupport(),
-                request.getOffice(),
-                userDetails.getUsername()
-        );
-        FabricProposalResponse response = connector.invoke("CreateCourt", params);
-
-        if (!response.getSuccess()) {
-            log.error("court creation error: {}, payload: {}", response.getMessage(), response.getPayload());
-            throw new ServerException(ExceptionStatus.FABRIC_INVOKE_ERROR);
-        }
+        FabricConnector connector = this.fabricService.getRootFabricConnector();
+        NetworkConfig networkConfig = this.fabricService.getNetworkConfig();
+        networkConfig.setChannelName(request.channelName());
+        connector.connectToChannel(networkConfig);
     }
 
-    public FabricCourt getCourtById(String id) {
-        this.fabricService.setChaincode("court", this.fabricConfig.getCourtChainCodeVersion());
-        FabricProposalResponse response = this.fabricService.query("GetCourtByID", List.of(id));
-
-        if (!response.getSuccess()) {
-            log.error("court creation error: {}, payload: {}", response.getMessage(), response.getPayload());
-            throw new ServerException(ExceptionStatus.FABRIC_INVOKE_ERROR);
-        }
-
-        return this.objectMapper.readValue(response.getPayload(), FabricCourt.class);
-    }
-
-    public void addCourtMember(CustomUserDetails userDetails, AddCourtMemberRequest request) {
-        FabricConnector connector = this.fabricService.getConnectorById(userDetails.getUsername());
-        connector.setChaincode("court", this.fabricConfig.getCourtChainCodeVersion());
-
-        List<String> params = List.of(
-                request.getCourtId(),
-                request.getMemberId()
-        );
-        FabricProposalResponse response = connector.invoke("AddMember", params);
-
-        if (!response.getSuccess()) {
-            log.error("add court member error: {}, payload: {}", response.getMessage(), response.getPayload());
-            throw new ServerException(ExceptionStatus.FABRIC_INVOKE_ERROR);
-        }
-    }
-
-    public void deleteCourtMember(CustomUserDetails userDetails, DeleteCourtMemberRequest request) {
-        String courtId = request.getCourtId();
-        FabricConnector connector = this.fabricService.getConnectorById(userDetails.getUsername());
-        connector.setChaincode("court", this.fabricConfig.getCourtChainCodeVersion());
-
-        List<String> params = List.of(
-                courtId,
-                request.getMemberId()
-        );
-        FabricProposalResponse response = connector.invoke("RemoveMember", params);
-
-        if (!response.getSuccess()) {
-            log.error("add court member error: {}, payload: {}", response.getMessage(), response.getPayload());
-            throw new ServerException(ExceptionStatus.FABRIC_INVOKE_ERROR);
-        }
-    }
-
-    public List<FabricCourtRequest> getUnfinalizedRequests(String id) {
-        this.fabricService.setChaincode("court", this.fabricConfig.getCourtChainCodeVersion());
-
-        List<String> params = List.of(id);
-        FabricProposalResponse response = this.fabricService.query("GetAllUnfinalizedRequests", params);
-
-        if (!response.getSuccess()) {
-            log.error("get unfinalized court request error: {}, payload: {}", response.getMessage(), response.getPayload());
-            throw new ServerException(ExceptionStatus.FABRIC_INVOKE_ERROR);
-        }
-
-        if (response.getPayload().isEmpty()) {
-            return List.of();
-        }
-
-        return this.objectMapper.readValue(response.getPayload(), new TypeReference<List<FabricCourtRequest>>() {});
-    }
-
-    public List<FabricCourtRequest> getFinalizedRequests(String id) {
-        this.fabricService.setChaincode("court", this.fabricConfig.getCourtChainCodeVersion());
-
-        List<String> params = List.of(id);
-        FabricProposalResponse response = this.fabricService.query("GetAllFinalizedRequests", params);
-
-        if (!response.getSuccess()) {
-            log.error("get finalized court request error: {}, payload: {}", response.getMessage(), response.getPayload());
-            throw new ServerException(ExceptionStatus.FABRIC_INVOKE_ERROR);
-        }
-
-        if (response.getPayload().isEmpty()) {
-            return List.of();
-        }
-
-        return this.objectMapper.readValue(response.getPayload(), new TypeReference<List<FabricCourtRequest>>() {});
-    }
-
-    public void createRegistryCourtRequest(CustomUserDetails userDetails, String courtId, RegistryDocumentDto document) {
-        String requestId = this.createId();
-        String documentId = this.createId();
-        RegistryDocument registryDocument = this.registryBuilder.build(documentId, document);
+    @Transactional
+    public void createRegistryDocument(CustomUserDetails userDetails, RegistryDocumentDto document) {
+        RegistryDocument registryDocument = this.documentBuilder.build("", document);
+        FabricConnector connector = this.getFabricConnector(userDetails, document.address());
         String documentJson = this.objectMapper.writeValueAsString(registryDocument);
 
-        CourtRequest courtRequest = CourtRequest.builder()
-                .id(requestId)
+        FabricProposalResponse response = connector.invoke("CreateRegistryDocument", List.of(documentJson));
+        if (!response.getSuccess()) {
+            throw new ServerException(ExceptionStatus.FABRIC_INVOKE_ERROR);
+        }
+
+        String documentId = response.getPayload();
+
+        String address = document.address();
+        String detailAddress = document.detailAddress();
+
+        AddressIndexKey key = AddressIndexKey.builder()
+                .address(address)
+                .detailAddress(detailAddress)
+                .build();
+
+        RegistryDocumentIndex index = RegistryDocumentIndex.builder()
+                .key(key)
                 .documentId(documentId)
-                .action("CreateRegistryDocument")
-                .payload(documentJson)
                 .build();
 
-        this.invokeAddRequest(userDetails.getUsername(), courtId, courtRequest);
+        this.registryDocumentIndexRepository.save(index);
     }
 
-    public void addBuildingDescriptionToTitleSection(
-            CustomUserDetails userDetails,
-            String courtId,
-            AddBuildingDescriptionToTitleSection data
+    public void addBuildingDescriptionToTitleSection(CustomUserDetails userDetails,
+                                                     String documentId,
+                                                     BuildingDescriptionDto data
     ) {
-        String requestId = this.createId();
-        String payload = this.objectMapper.writeValueAsString(data.buildingDescription());
+        FabricConnector connector = this.getFabricConnector(userDetails, data.address());
 
-        CourtRequest courtRequest = CourtRequest.builder()
-                .id(requestId)
-                .documentId(data.documentId())
-                .action("AddBuildingDescriptionToTitleSection")
-                .payload(payload)
+        BuildingDescription buildingDescription = BuildingDescription.builder()
+                .displayNumber(data.displayNumber())
+                .receiptDate(data.receiptDate())
+                .locationNumber(data.locationNumber())
+                .buildingDetails(data.buildingDetails())
+                .registrationCause(data.registrationCause())
                 .build();
 
-        this.invokeAddRequest(userDetails.getUsername(), courtId, courtRequest);
-    }
+        String payload = this.objectMapper.writeValueAsString(buildingDescription);
+        List<String> params = List.of(documentId, payload);
 
-    public void addLandDescriptionToTitleSection(
-            CustomUserDetails userDetails,
-            String courtId,
-            AddLandDescriptionToTitleSection data
-    ) {
-        String requestId = this.createId();
-        String payload = this.objectMapper.writeValueAsString(data.landDescription());
-
-        CourtRequest courtRequest = CourtRequest.builder()
-                .id(requestId)
-                .documentId(data.documentId())
-                .action("AddBuildingDescriptionToTitleSection")
-                .payload(payload)
-                .build();
-
-        this.invokeAddRequest(userDetails.getUsername(), courtId, courtRequest);
-    }
-
-    public void addBuildingDescriptionToExclusivePart(
-            CustomUserDetails userDetails,
-            String courtId,
-            AddBuildingPartDescriptionToExclusivePart data
-    ) {
-        String requestId = this.createId();
-        String payload = this.objectMapper.writeValueAsString(data.buildingPartDescription());
-
-        CourtRequest courtRequest = CourtRequest.builder()
-                .id(requestId)
-                .documentId(data.documentId())
-                .action("AddBuildingDescriptionToExclusivePart")
-                .payload(payload)
-                .build();
-
-        this.invokeAddRequest(userDetails.getUsername(), courtId, courtRequest);
-    }
-
-    public void addLandRightDescriptionToExclusivePart(
-            CustomUserDetails userDetails,
-            String courtId,
-            AddLandRightDescriptionToExclusivePart data
-    ) {
-        String requestId = this.createId();
-        String payload = this.objectMapper.writeValueAsString(data.landRightDescription());
-
-        CourtRequest courtRequest = CourtRequest.builder()
-                .id(requestId)
-                .documentId(data.documentId())
-                .action("AddLandRightDescriptionToExclusivePart")
-                .payload(payload)
-                .build();
-
-        this.invokeAddRequest(userDetails.getUsername(), courtId, courtRequest);
-    }
-
-    public void addFirstSectionEntry(
-            CustomUserDetails userDetails,
-            String courtId,
-            AddFirstSectionEntry data
-    ) {
-        String requestId = this.createId();
-        String payload = this.objectMapper.writeValueAsString(data.firstSection());
-
-        CourtRequest courtRequest = CourtRequest.builder()
-                .id(requestId)
-                .documentId(data.documentId())
-                .action("AddFirstSectionEntry")
-                .payload(payload)
-                .build();
-
-        this.invokeAddRequest(userDetails.getUsername(), courtId, courtRequest);
-    }
-
-    public void addSecondSectionEntry(
-            CustomUserDetails userDetails,
-            String courtId,
-            AddSecondSectionEntry data
-    ) {
-        String requestId = this.createId();
-        String payload = this.objectMapper.writeValueAsString(data.secondSection());
-
-        CourtRequest courtRequest = CourtRequest.builder()
-                .id(requestId)
-                .documentId(data.documentId())
-                .action("AddFirstSectionEntry")
-                .payload(payload)
-                .build();
-
-        this.invokeAddRequest(userDetails.getUsername(), courtId, courtRequest);
-    }
-
-    private void invokeAddRequest(String user, String courtId, CourtRequest request) {
-        FabricConnector connector = this.fabricService.getConnectorById(user);
-        connector.setChaincode("court", this.fabricConfig.getCourtChainCodeVersion());
-
-        String requestJson = this.objectMapper.writeValueAsString(request);
-        List<String> params = List.of(courtId, requestJson);
-        FabricProposalResponse response = connector.invoke("AddRequest", params);
-
+        FabricProposalResponse response = connector.invoke("AddBuildingDescriptionToTitleSection", params);
         if (!response.getSuccess()) {
-            log.error("add court request error: {}, payload: {}", response.getMessage(), response.getPayload());
             throw new ServerException(ExceptionStatus.FABRIC_INVOKE_ERROR);
         }
     }
 
-    public void finalizeCourtRequest(CustomUserDetails userDetails, String courtId, FinalizeCourtRequest request) {
-        FabricConnector connector = this.fabricService.getConnectorById(userDetails.getUsername());
-        connector.setChaincode("court", this.fabricConfig.getCourtChainCodeVersion());
+    public void addLandDescriptionToTitleSection(CustomUserDetails userDetails,
+                                                 String documentId,
+                                                 LandDescriptionDto data
+    ) {
+        FabricConnector connector = this.getFabricConnector(userDetails, data.address());
 
-        List<String> params = List.of(
-                courtId,
-                request.requestId(),
-                request.status(),
-                request.errorMessage()
-        );
-        FabricProposalResponse response = connector.invoke("FinalizeRequest", params);
+        LandDescription landDescription = LandDescription.builder()
+                .displayNumber(data.displayNumber())
+                .locationNumber(data.locationNumber())
+                .landType(data.landType())
+                .area(data.area())
+                .registrationCause(data.registrationCause())
+                .build();
 
+        String payload = this.objectMapper.writeValueAsString(landDescription);
+        List<String> params = List.of(documentId, payload);
+
+        FabricProposalResponse response = connector.invoke("AddLandDescriptionToTitleSection", params);
         if (!response.getSuccess()) {
-            log.error("finalize court request error: {}, payload: {}", response.getMessage(), response.getPayload());
             throw new ServerException(ExceptionStatus.FABRIC_INVOKE_ERROR);
         }
     }
 
-    private String createId() {
-        return String.valueOf(UUID.randomUUID());
+    public void addBuildingDescriptionToExclusivePart(CustomUserDetails userDetails,
+                                                      String documentId,
+                                                      BuildingPartDescriptionDto data
+    ) {
+        FabricConnector connector = this.getFabricConnector(userDetails, data.address());
+
+        BuildingPartDescription buildingPartDescription = BuildingPartDescription.builder()
+                .displayNumber(data.displayNumber())
+                .receiptDate(data.receiptDate())
+                .partNumber(data.partNumber())
+                .buildingDetails(data.buildingDetails())
+                .registrationCause(data.registrationCause())
+                .build();
+
+        String payload = this.objectMapper.writeValueAsString(buildingPartDescription);
+        List<String> params = List.of(documentId, payload);
+
+        FabricProposalResponse response = connector.invoke("AddBuildingDescriptionToExclusivePart", params);
+        if (!response.getSuccess()) {
+            throw new ServerException(ExceptionStatus.FABRIC_INVOKE_ERROR);
+        }
+    }
+
+    public void addLandRightDescriptionToExclusivePart(CustomUserDetails userDetails,
+                                                       String documentId,
+                                                       LandRightDescriptionDto data
+    ) {
+        FabricConnector connector = this.getFabricConnector(userDetails, data.address());
+
+        LandRightDescription landRightDescription = LandRightDescription.builder()
+                .displayNumber(data.displayNumber())
+                .landRightType(data.landRightType())
+                .landRightRatio(data.landRightRatio())
+                .registrationCause(data.registrationCause())
+                .build();
+
+        String payload = this.objectMapper.writeValueAsString(landRightDescription);
+        List<String> params = List.of(documentId, payload);
+
+        FabricProposalResponse response = connector.invoke("AddLandRightDescriptionToExclusivePart", params);
+        if (!response.getSuccess()) {
+            throw new ServerException(ExceptionStatus.FABRIC_INVOKE_ERROR);
+        }
+    }
+
+    public void addFirstSectionEntry(CustomUserDetails userDetails,
+                                     String documentId,
+                                     FirstSectionDto data
+    ) {
+        FabricConnector connector = this.getFabricConnector(userDetails, data.address());
+
+        FirstSection firstSection = FirstSection.builder()
+                .rankNumber(data.rankNumber())
+                .registrationPurpose(data.registrationPurpose())
+                .receiptDate(data.receiptDate())
+                .registrationCause(data.registrationCause())
+                .holderAndAdditionalInfo(data.holderAndAdditionalInfo())
+                .build();
+
+        String payload = this.objectMapper.writeValueAsString(firstSection);
+        List<String> params = List.of(documentId, payload);
+
+        FabricProposalResponse response = connector.invoke("AddFirstSectionEntry", params);
+        if (!response.getSuccess()) {
+            throw new ServerException(ExceptionStatus.FABRIC_INVOKE_ERROR);
+        }
+    }
+
+    public void addSecondSectionEntry(CustomUserDetails userDetails,
+                                      String documentId,
+                                      SecondSectionDto data
+    ) {
+        FabricConnector connector = this.getFabricConnector(userDetails, data.address());
+
+        SecondSection secondSection = SecondSection.builder()
+                .rankNumber(data.rankNumber())
+                .registrationPurpose(data.registrationPurpose())
+                .receiptDate(data.receiptDate())
+                .registrationCause(data.registrationCause())
+                .holderAndAdditionalInfo(data.holderAndAdditionalInfo())
+                .build();
+
+        String payload = this.objectMapper.writeValueAsString(secondSection);
+        List<String> params = List.of(documentId, payload);
+
+        FabricProposalResponse response = connector.invoke("AddSecondSectionEntry", params);
+        if (!response.getSuccess()) {
+            throw new ServerException(ExceptionStatus.FABRIC_INVOKE_ERROR);
+        }
+    }
+
+    private FabricConnector getFabricConnector(CustomUserDetails userDetails, String address) {
+        this.accessControl.hasRegistryRole(userDetails);
+
+        Court court = this.jurisdictionRepository.findCourtByAddress(address)
+                .orElseThrow(() -> new BadRequestException(ExceptionStatus.NOT_SUPPORT_LOCATION));
+
+        UserAccount userAccount = userDetails.getUserAccount();
+        String id = userAccount.getFabricId();
+        FabricConnector connector = this.fabricService.getConnectorByIdAndChannel(id, court.getChannelName());
+        connector.setChaincode(FabricConfig.REGISTRY_CHAIN_CODE, this.fabricConfig.getRegistryChainCodeVersion());
+
+        return connector;
+    }
+
+    public IssuerData getIssuerDataByHash(CustomUserDetails userDetails, String hash) {
+        this.accessControl.hasRegistryRole(userDetails);
+
+        UserAccount userAccount = userDetails.getUserAccount();
+        String id = userAccount.getFabricId();
+        Court court = userAccount.getCourt();
+        FabricConnector connector = this.fabricService.getConnectorByIdAndChannel(id, court.getChannelName());
+        connector.setChaincode(FabricConfig.ISSUANCE_CHAIN_CODE, this.fabricConfig.getIssuanceChainCodeVersion());
+
+        List<String> params = List.of(hash);
+        FabricProposalResponse response = connector.query("GetIssuerDataByIssuanceHash", params);
+
+        if (!response.getSuccess()) {
+            throw new ServerException(ExceptionStatus.FABRIC_QUERY_ERROR);
+        }
+
+        String payload = response.getPayload();
+
+        return this.objectMapper.readValue(payload, IssuerData.class);
     }
 }

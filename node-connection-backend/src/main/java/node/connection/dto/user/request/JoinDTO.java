@@ -1,13 +1,15 @@
 package node.connection.dto.user.request;
 
-import lombok.Getter;
-import lombok.Setter;
+import jakarta.annotation.Nullable;
 
-@Setter
-@Getter
-public class JoinDTO {
+public record JoinDTO (
 
-    private String username;
-    private String password;
-    private String phonenum;
-}
+    String username,
+
+    String phoneNumber,
+
+    String email,
+
+    @Nullable
+    String courtCode
+) {}

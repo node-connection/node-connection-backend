@@ -13,16 +13,22 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 
 @Entity(name = "user_account_tb")
+@Table(
+        name = "user_account_tb",
+        uniqueConstraints = {
+            @UniqueConstraint(columnNames = {"mpsId", "number"})
+        }
+)
 @Getter
 @NoArgsConstructor
 public class UserAccount {
     @Id
-    private String name;
+    private String fabricId;
 
     @Column
     private String mspId;
 
-    @Column(unique = true)
+    @Column
     private String number;
 
     @Column
@@ -35,27 +41,44 @@ public class UserAccount {
     @Enumerated(EnumType.STRING)
     private Role role;
 
+    @Column
+    private String userName;
+
+    @Column
+    private String phoneNumber;
+
+    @Column
+    private String email;
+
+    @ManyToOne(cascade = CascadeType.ALL)
+    private Court court;
+
     @Column(columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime createdAt;
 
     @Column
     private LocalDateTime updatedAt;
 
+
     @Builder
-    public UserAccount(String name, String mspId, String number, String secret, String enrollment, Role role, LocalDateTime createdAt, LocalDateTime updatedAt) {
-        this.name = name;
+    public UserAccount(String fabricId, String mspId, String number, String secret, String enrollment, Role role, String userName, String phoneNumber, String email, Court court, LocalDateTime createdAt, LocalDateTime updatedAt) {
+        this.fabricId = fabricId;
         this.mspId = mspId;
         this.number = number;
         this.secret = secret;
         this.enrollment = enrollment;
         this.role = role;
+        this.userName = userName;
+        this.phoneNumber = phoneNumber;
+        this.email = email;
+        this.court = court;
         this.createdAt = createdAt == null ? LocalDateTime.now() : createdAt;
         this.updatedAt = updatedAt == null ? LocalDateTime.now() : updatedAt;
     }
 
-    public static UserAccount of(String name, String mspId, String secret, String enrollment) {
+    public static UserAccount of(String fabricId, String mspId, String secret, String enrollment) {
         return UserAccount.builder()
-                .name(name)
+                .fabricId(fabricId)
                 .mspId(mspId)
                 .secret(secret)
                 .enrollment(enrollment)
@@ -65,7 +88,7 @@ public class UserAccount {
 
     public static UserAccount of(Registrar registrar, String secret, String enrollment) {
         return UserAccount.builder()
-                .name(registrar.getName())
+                .fabricId(registrar.getName())
                 .mspId(registrar.getMspId())
                 .secret(secret)
                 .enrollment(enrollment)
@@ -75,7 +98,7 @@ public class UserAccount {
 
     public static UserAccount of(Client client, String number, String secret, String enrollment) {
         return UserAccount.builder()
-                .name(client.getName())
+                .fabricId(client.getName())
                 .mspId(client.getMspId())
                 .number(number)
                 .secret(secret)
@@ -86,7 +109,7 @@ public class UserAccount {
 
     public static UserAccount of(Client client, String number, String secret, String enrollment, Role role) {
         return UserAccount.builder()
-                .name(client.getName())
+                .fabricId(client.getName())
                 .mspId(client.getMspId())
                 .number(number)
                 .secret(secret)
@@ -105,5 +128,33 @@ public class UserAccount {
         else {
             return Role.ANONYMOUS;
         }
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public void setCourt(Court court) {
+        this.court = court;
+    }
+
+    public void setEnrollment(String enrollment) {
+        this.enrollment = enrollment;
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
+    }
+
+    public void setSecret(String secret) {
+        this.secret = secret;
     }
 }

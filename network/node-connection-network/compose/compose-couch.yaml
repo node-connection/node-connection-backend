@@ -13,6 +13,7 @@ services:
   couchdb0:
     container_name: couchdb0
     image: couchdb:3.3.3
+    restart: always
     labels:
       service: hyperledger-fabric
     # Populate the COUCHDB_USER and COUCHDB_PASSWORD to set an admin user and password
@@ -28,6 +29,7 @@ services:
       - test
 
   peer0.registry.node.connection:
+    restart: always
     environment:
       - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
       - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb0:5984
@@ -42,6 +44,7 @@ services:
   couchdb1:
     container_name: couchdb1
     image: couchdb:3.3.3
+    restart: always
     labels:
       service: hyperledger-fabric
     # Populate the COUCHDB_USER and COUCHDB_PASSWORD to set an admin user and password
@@ -57,6 +60,7 @@ services:
       - test
 
   peer0.viewer.node.connection:
+    restart: always
     environment:
       - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
       - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb1:5984

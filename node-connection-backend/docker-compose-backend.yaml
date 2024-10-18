@@ -1,0 +1,40 @@
+version: '3.9'
+
+services:
+  backend:
+    image: seokjun0915/node-connection-backend
+    container_name: node-connection-backend
+    environment:
+      CA_ADMIN_NAME: ${CA_ADMIN_NAME}
+      CA_ADMIN_PASSWORD: ${CA_ADMIN_PASSWORD}
+      CA_REGISTRY_NAME: ${CA_REGISTRY_NAME}
+      CA_REGISTRY_PEM: /etc/hyperledger/fabric-ca/registry/ca-cert.pem
+      CA_REGISTRY_URL: ${CA_REGISTRY_URL}
+      CA_URL: ${CA_REGISTRY_URL}
+      CA_VIEWER_NAME: ${CA_VIEWER_NAME}
+      CA_VIEWER_PEM: /etc/hyperledger/fabric-ca/viewer/ca-cert.pem
+      CA_VIEWER_URL: ${CA_VIEWER_URL}
+      CHANNEL_NAME: ${CHANNEL_NAME}
+      FABRIC_PEM_PATH: /etc/hyperledger/pem
+      JWE_SALT: ${JWE_SALT}
+      JWE_SECRET: ${JWE_SECRET}
+      ORDERER_NAME: ${ORDERER_NAME}
+      ORDERER_PEM: /etc/hyperledger/fabric-ca/orderer/tlsca.node.connection-cert.pem
+      ORDERER_URL: ${ORDERER_URL}
+      REGISTRY_PEER_NAME: ${REGISTRY_PEER_NAME}
+      REGISTRY_PEER_PEM: /etc/hyperledger/fabric-ca/registry-peer/tlsca.registry.node.connection-cert.pem
+      REGISTRY_PEER_URL: ${REGISTRY_PEER_URL}
+      ROOT_MSP: ${ROOT_MSP}
+      ROOT_NUMBER: ${ROOT_NUMBER}
+      ROOT_PASSWORD: ${ROOT_PASSWORD}
+      VIEWER_PEER_NAME: ${VIEWER_PEER_NAME}
+      VIEWER_PEER_PEM: /etc/hyperledger/fabric-ca/viewer-peer/tlsca.viewer.node.connection-cert.pem
+      VIEWER_PEER_URL: ${VIEWER_PEER_URL}
+    volumes:
+      - ${CA_REGISTRY_PEM}:/etc/hyperledger/fabric-ca/registry/ca-cert.pem
+      - ${CA_VIEWER_PEM}:/etc/hyperledger/fabric-ca/viewer/ca-cert.pem
+      - ${ORDERER_PEM}:/etc/hyperledger/fabric-ca/orderer/tlsca.node.connection-cert.pem
+      - ${REGISTRY_PEER_PEM}:/etc/hyperledger/fabric-ca/registry-peer/tlsca.registry.node.connection-cert.pem
+      - ${VIEWER_PEER_PEM}:/etc/hyperledger/fabric-ca/viewer-peer/tlsca.viewer.node.connection-cert.pem
+    ports:
+      - "8083:8083"

@@ -6,7 +6,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import node.connection._core.exception.ExceptionStatus;
+import node.connection._core.exception.client.BadRequestException;
 import node.connection._core.exception.client.NotFoundException;
+import node.connection.dto.user.request.JoinDTO;
 import node.connection.entity.UserAccount;
 import node.connection.entity.constant.Role;
 import node.connection.repository.UserAccountRepository;
@@ -16,6 +18,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 
 import java.io.IOException;
@@ -27,13 +30,18 @@ public class JwtAuthenticationFilter extends BasicAuthenticationFilter {
 
     private final UserAccountRepository userAccountRepository;
 
+    private final PasswordEncoder passwordEncoder;
+
 
     public JwtAuthenticationFilter(AuthenticationManager authenticationManager,
                                    JweDecoder jweDecoder,
-                                   UserAccountRepository userAccountRepository) {
+                                   UserAccountRepository userAccountRepository,
+                                   PasswordEncoder passwordEncoder
+    ) {
         super(authenticationManager);
         this.jweDecoder = jweDecoder;
         this.userAccountRepository = userAccountRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
 
@@ -56,15 +64,19 @@ public class JwtAuthenticationFilter extends BasicAuthenticationFilter {
         String mspId = sub.split(":")[0];
         String number = sub.split(":")[1];
         String secret = sub.split(":")[2];
-        String name = FabricService.getId(mspId, number);
+        String fabricId = FabricService.getId(mspId, number);
 
-        if (request.getRequestURI().contains("/user/register")) {
+        if (request.getRequestURI().contains("/user/register") || request.getRequestURI().contains("/user/login")) {
             Role role = Role.ANONYMOUS;
             setAuthentication(mspId, number, secret, role);
         }
         else {
-            UserAccount userAccount = this.userAccountRepository.findByName(name)
+            UserAccount userAccount = this.userAccountRepository.findByFabricId(fabricId)
                     .orElseThrow(() -> new NotFoundException(ExceptionStatus.USER_NOT_FOUND));
+
+            if (!this.passwordEncoder.matches(secret, userAccount.getSecret())) {
+                throw new BadRequestException(ExceptionStatus.INVALID_PASSWORD);
+            }
 
             setAuthentication(userAccount);
         }
@@ -85,7 +97,7 @@ public class JwtAuthenticationFilter extends BasicAuthenticationFilter {
 
     private void setAuthentication(String mspId, String number, String secret, Role role) {
         String id = FabricService.getId(mspId, number);
-        UserAccount userAccount = UserAccount.builder().name(id).mspId(mspId).secret(secret).role(role).build();
+        UserAccount userAccount = UserAccount.builder().fabricId(id).mspId(mspId).number(number).secret(secret).role(role).build();
         CustomUserDetails userDetails = new CustomUserDetails(userAccount);
         Authentication authentication = new UsernamePasswordAuthenticationToken(
                 userDetails,

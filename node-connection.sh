@@ -61,21 +61,21 @@ function setup_requirements() {
     fi
 
     # Check if libindy is installed
-    if ! dpkg -l | grep -q libindy; then
-        echo -e "${YELLOW}libindy is not installed. Installing libindy...${NC}"
+    # if ! dpkg -l | grep -q libindy; then
+    #     echo -e "${YELLOW}libindy is not installed. Installing libindy...${NC}"
 
-        sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 68DB5E88
+    #     sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 68DB5E88
 
-        sudo add-apt-repository "deb https://repo.sovrin.org/sdk/deb bionic master"
+    #     sudo add-apt-repository "deb https://repo.sovrin.org/sdk/deb bionic master"
 
-        sudo apt-get update
+    #     sudo apt-get update
 
-        sudo apt-get install -y libindy
+    #     sudo apt-get install -y libindy
 
-        echo -e "${GREEN}libindy has been installed successfully.${NC}"
-    else
-        echo -e "${GREEN}libindy is already installed.${NC}"
-    fi
+    #     echo -e "${GREEN}libindy has been installed successfully.${NC}"
+    # else
+    #     echo -e "${GREEN}libindy is already installed.${NC}"
+    # fi
 }
 
 function setup_hyperledger_fabric() {
@@ -134,15 +134,15 @@ function config_org_env() {
                 var_value=${BASH_REMATCH[2]}
                 echo "export $var_name=$var_value"
             fi
-        done < <(./setOrgEnv.sh Registry)
+        done < <(bash setOrgEnv.sh Registry)
 
-        while IFS= read -r line; do
-            if [[ $line =~ ^([^=]+)=(.*)$ ]]; then
-                var_name=${BASH_REMATCH[1]}
-                var_value=${BASH_REMATCH[2]}
-                echo "export $var_name=$var_value"
-            fi
-        done < <(./setOrgEnv.sh Viewer)
+        # while IFS= read -r line; do
+        #     if [[ $line =~ ^([^=]+)=(.*)$ ]]; then
+        #         var_name=${BASH_REMATCH[1]}
+        #         var_value=${BASH_REMATCH[2]}
+        #         echo "export $var_name=$var_value"
+        #     fi
+        # done < <(./setOrgEnv.sh Viewer)
 
         cd ../..
     } > $CONFIG_FILE
@@ -207,13 +207,17 @@ function export_config() {
     # Write the configuration to hyperledger.config.sh
     echo '# Node Connection' > hyperledger.config.sh
     echo '' >> hyperledger.config.sh
-    echo '# Hyperledger Fabric and Indy Configuration' >> hyperledger.config.sh
+    echo '# Hyperledger Fabric Configuration' >> hyperledger.config.sh
 
     # Indy Wallet Storage
-    echo '# Indy Wallet Storage' >> hyperledger.config.sh
-    echo 'USER_WALLET_STORAGE=src/main/java/node/connection/wallet/user' >> hyperledger.config.sh
-    echo 'COURT_WALLET_STORAGE=src/main/java/node/connection/wallet/court' >> hyperledger.config.sh
-    echo 'export USER_WALLET_STORAGE COURT_WALLET_STORAGE' >> hyperledger.config.sh
+    # echo '# Indy Wallet Storage' >> hyperledger.config.sh
+    # echo 'USER_WALLET_STORAGE=src/main/java/node/connection/wallet/user' >> hyperledger.config.sh
+    # echo 'COURT_WALLET_STORAGE=src/main/java/node/connection/wallet/court' >> hyperledger.config.sh
+    # echo 'export USER_WALLET_STORAGE COURT_WALLET_STORAGE' >> hyperledger.config.sh
+
+    # Fabric Organization Path
+    echo "FABRIC_ORG_PATH=$current_dir/network/node-connection-network/organizations" >> hyperledger.config.sh
+    echo 'export FABRIC_ORG_PATH' >> hyperledger.config.sh
 
     # Fabric CA Information
     echo '' >> hyperledger.config.sh
@@ -258,7 +262,7 @@ function export_config() {
     # Fabric Channel Information
     echo '' >> hyperledger.config.sh
     echo '# Fabric Channel Information' >> hyperledger.config.sh
-    echo 'CHANNEL_NAME=nodeconnectionchannel' >> hyperledger.config.sh
+    echo 'CHANNEL_NAME=busan-headquarters-office' >> hyperledger.config.sh
     echo 'export CHANNEL_NAME' >> hyperledger.config.sh
 
     echo '' >> hyperledger.config.sh
@@ -388,7 +392,7 @@ function start_application() {
     config_org_env
 
     echo -e "${YELLOW}Creating default channel...${NC}"
-    ./network/node-connection-network/network.sh createChannel -c nodeconnectionchannel
+    ./network/node-connection-network/network.sh createChannel -c busan-headquarters-office
 
     echo -e "${YELLOW}Exporting Hyperledger network config...${NC}"
     export_config

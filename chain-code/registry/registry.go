@@ -5,8 +5,11 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
 
@@ -17,6 +20,8 @@ type SmartContract struct {
 // 부동산 등기부등본 (Registry Document)
 type RegistryDocument struct {
 	ID                       string                     `json:"id"`                       // 등기부등본 ID
+	Address									 string											`json:"address"`									// 주소
+	DetailAddress						 string 										`json:"detailAddress"`					  // 상세주소
 	TitleSection             TitleSection               `json:"titleSection"`             // 표제부
 	ExclusivePartDescription ExclusivePartDescription   `json:"exclusivePartDescription"` // 전유부분의 건물의 표시
 	FirstSection             []FirstSection             `json:"firstSection"`             // 갑구
@@ -89,14 +94,42 @@ func (s *SmartContract) InitLedger(ctx contractapi.TransactionContextInterface) 
 	return nil
 }
 
+func generateDocumentID(payload string) string {
+	hash := sha256.New()
+	hash.Write([]byte(payload))
+	return base64.RawURLEncoding.EncodeToString(hash.Sum(nil))
+}
+
 // 등기부등본 생성
-func (s *SmartContract) CreateRegistryDocument(ctx contractapi.TransactionContextInterface, id string, document RegistryDocument) error {
-	documentJSON, err := json.Marshal(document)
+func (s *SmartContract) CreateRegistryDocument(ctx contractapi.TransactionContextInterface, document RegistryDocument) (string, error) {
+	mspid, err := ctx.GetClientIdentity().GetMSPID()
 	if err != nil {
-		return fmt.Errorf("failed to marshal document: %v", err)
+		return "", fmt.Errorf("failed to get MSPID: %v", err)
 	}
 
-	return ctx.GetStub().PutState(id, documentJSON)
+	if mspid != "RegistryMSP" {
+		return "", fmt.Errorf("access denied: only RegistryMSP can read the data")
+	}
+
+	documentJSON, err := json.Marshal(document)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal document: %v", err)
+	}
+
+	id := generateDocumentID(string(documentJSON))
+	document.ID = id
+
+	documentJSON, err = json.Marshal(document)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal document: %v", err)
+	}
+
+	err = ctx.GetStub().PutState(id, documentJSON)
+	if err != nil {
+		return id, fmt.Errorf("failed to put document into world state: %v", err)
+	}
+
+	return id, err
 }
 
 func (s *SmartContract) GetRegistryDocumentByID(ctx contractapi.TransactionContextInterface, id string) (*RegistryDocument, error) {
@@ -117,73 +150,174 @@ func (s *SmartContract) GetRegistryDocumentByID(ctx contractapi.TransactionConte
 	return &document, nil
 }
 
+func (s *SmartContract) GetRegistryDocumentByAddress(ctx contractapi.TransactionContextInterface, address string, detailAddress string) ([]*RegistryDocument, error) {
+	queryString := fmt.Sprintf(`{"selector":{"address": "%s", "detailAddress": "%s"}}`, address, detailAddress)
+	resultsIterator, err := ctx.GetStub().GetQueryResult(queryString)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute query: %v", err)
+	}
+	defer resultsIterator.Close()
+
+	var documents []*RegistryDocument
+
+	for resultsIterator.HasNext() {
+		queryResponse, err := resultsIterator.Next()
+		if err != nil {
+			return nil, fmt.Errorf("failed to retrieve next item: %v", err)
+		}
+
+		var document RegistryDocument
+		if err := json.Unmarshal(queryResponse.Value, &document); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal document JSON: %v", err)
+		}
+
+		documents = append(documents, &document)
+	}
+
+	return documents, nil
+}
+
 func (s *SmartContract) AddBuildingDescriptionToTitleSection(ctx contractapi.TransactionContextInterface, id string, buildingDesc BuildingDescription) error {
+	mspid, err := ctx.GetClientIdentity().GetMSPID()
+	if err != nil {
+		return fmt.Errorf("failed to get MSPID: %v", err)
+	}
+
+	if mspid != "RegistryMSP" {
+		return fmt.Errorf("access denied: only RegistryMSP can read the data")
+	}
+
 	document, err := s.GetRegistryDocumentByID(ctx, id)
 	if err != nil {
 		return err
 	}
 
 	document.TitleSection.BuildingDescription = append(document.TitleSection.BuildingDescription, buildingDesc)
-	return s.updateRegistryDocument(ctx, document)
+	documentJSON, err := json.Marshal(document)
+	if err != nil {
+		return err
+	}
+
+	return ctx.GetStub().PutState(id, documentJSON)
 }
 
 func (s *SmartContract) AddLandDescriptionToTitleSection(ctx contractapi.TransactionContextInterface, id string, landDesc LandDescription) error {
+	mspid, err := ctx.GetClientIdentity().GetMSPID()
+	if err != nil {
+		return fmt.Errorf("failed to get MSPID: %v", err)
+	}
+
+	if mspid != "RegistryMSP" {
+		return fmt.Errorf("access denied: only RegistryMSP can read the data")
+	}
 	document, err := s.GetRegistryDocumentByID(ctx, id)
 	if err != nil {
 		return err
 	}
 
 	document.TitleSection.LandDescription = append(document.TitleSection.LandDescription, landDesc)
-	return s.updateRegistryDocument(ctx, document)
+	documentJSON, err := json.Marshal(document)
+	if err != nil {
+		return err
+	}
+
+	return ctx.GetStub().PutState(id, documentJSON)
 }
 
 func (s *SmartContract) AddBuildingDescriptionToExclusivePart(ctx contractapi.TransactionContextInterface, id string, buildingDesc BuildingPartDescription) error {
+	mspid, err := ctx.GetClientIdentity().GetMSPID()
+	if err != nil {
+		return fmt.Errorf("failed to get MSPID: %v", err)
+	}
+
+	if mspid != "RegistryMSP" {
+		return fmt.Errorf("access denied: only RegistryMSP can read the data")
+	}
+
 	document, err := s.GetRegistryDocumentByID(ctx, id)
 	if err != nil {
 		return err
 	}
 
 	document.ExclusivePartDescription.BuildingPartDescription = append(document.ExclusivePartDescription.BuildingPartDescription, buildingDesc)
-	return s.updateRegistryDocument(ctx, document)
+	documentJSON, err := json.Marshal(document)
+	if err != nil {
+		return err
+	}
+
+	return ctx.GetStub().PutState(id, documentJSON)
 }
 
 func (s *SmartContract) AddLandRightDescriptionToExclusivePart(ctx contractapi.TransactionContextInterface, id string, landRightDesc LandRightDescription) error {
+	mspid, err := ctx.GetClientIdentity().GetMSPID()
+	if err != nil {
+		return fmt.Errorf("failed to get MSPID: %v", err)
+	}
+
+	if mspid != "RegistryMSP" {
+		return fmt.Errorf("access denied: only RegistryMSP can read the data")
+	}
+
 	document, err := s.GetRegistryDocumentByID(ctx, id)
 	if err != nil {
 		return err
 	}
 
 	document.ExclusivePartDescription.LandRightDescription = append(document.ExclusivePartDescription.LandRightDescription, landRightDesc)
-	return s.updateRegistryDocument(ctx, document)
+	documentJSON, err := json.Marshal(document)
+	if err != nil {
+		return err
+	}
+
+	return ctx.GetStub().PutState(id, documentJSON)
 }
 
 func (s *SmartContract) AddFirstSectionEntry(ctx contractapi.TransactionContextInterface, id string, firstSectionEntry FirstSection) error {
+	mspid, err := ctx.GetClientIdentity().GetMSPID()
+	if err != nil {
+		return fmt.Errorf("failed to get MSPID: %v", err)
+	}
+
+	if mspid != "RegistryMSP" {
+		return fmt.Errorf("access denied: only RegistryMSP can read the data")
+	}
+
 	document, err := s.GetRegistryDocumentByID(ctx, id)
 	if err != nil {
 		return err
 	}
 
 	document.FirstSection = append(document.FirstSection, firstSectionEntry)
-	return s.updateRegistryDocument(ctx, document)
+	documentJSON, err := json.Marshal(document)
+	if err != nil {
+		return err
+	}
+
+	return ctx.GetStub().PutState(id, documentJSON)
 }
 
 func (s *SmartContract) AddSecondSectionEntry(ctx contractapi.TransactionContextInterface, id string, secondSectionEntry SecondSection) error {
+	mspid, err := ctx.GetClientIdentity().GetMSPID()
+	if err != nil {
+		return fmt.Errorf("failed to get MSPID: %v", err)
+	}
+
+	if mspid != "RegistryMSP" {
+		return fmt.Errorf("access denied: only RegistryMSP can read the data")
+	}
+
 	document, err := s.GetRegistryDocumentByID(ctx, id)
 	if err != nil {
 		return err
 	}
 
 	document.SecondSection = append(document.SecondSection, secondSectionEntry)
-	return s.updateRegistryDocument(ctx, document)
-}
-
-func (s *SmartContract) updateRegistryDocument(ctx contractapi.TransactionContextInterface, document *RegistryDocument) error {
 	documentJSON, err := json.Marshal(document)
 	if err != nil {
 		return err
 	}
 
-	return ctx.GetStub().PutState(document.ID, documentJSON)
+	return ctx.GetStub().PutState(id, documentJSON)
 }
 
 func main() {

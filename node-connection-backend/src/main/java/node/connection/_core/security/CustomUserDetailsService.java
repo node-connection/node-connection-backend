@@ -22,7 +22,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String name) throws UsernameNotFoundException {
-        UserAccount userAccount = userAccountRepository.findByName(name)
+        UserAccount userAccount = userAccountRepository.findByFabricId(name)
                 .orElseThrow(() -> new NotFoundException(ExceptionStatus.USER_NOT_FOUND));
 
         return new CustomUserDetails(userAccount);

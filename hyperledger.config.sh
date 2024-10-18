@@ -36,6 +36,6 @@ ORDERER_PEM=/home/seokwns/workspace/project/node-connection-backend/network/node
 export ORDERER_NAME ORDERER_URL ORDERER_PEM
 
 # Fabric Channel Information
-CHANNEL_NAME=nodeconnectionchannel
+CHANNEL_NAME=node-connection-default-channel
 export CHANNEL_NAME
 
