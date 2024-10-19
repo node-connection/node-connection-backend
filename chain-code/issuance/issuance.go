@@ -153,7 +153,7 @@ func (s *SmartContract) Issuance(ctx contractapi.TransactionContextInterface, is
 	var registryDocument RegistryDocument
 	err = json.Unmarshal(response.Payload, &registryDocument)
 	if err != nil {
-		return "", fmt.Errorf("Failed to unmarshal registry document: %s", err)
+		return "", fmt.Errorf("failed to unmarshal registry document: %s", err)
 	}
 
 	// 3. 발급 내역 저장
@@ -192,20 +192,20 @@ func (s *SmartContract) Issuance(ctx contractapi.TransactionContextInterface, is
 
 	issuanceDataJSON, err := json.Marshal(issuanceData)
 	if err != nil {
-		return "", fmt.Errorf("Failed to marshal PDC data: %s", err)
+		return "", fmt.Errorf("failed to marshal PDC data: %s", err)
 	}
 
 	issuanceHash := generateIssuanceHash(issuanceDataJSON)
 
 	err = ctx.GetStub().PutState(issuanceHash, issuanceDataJSON)
 	if err != nil {
-		return "", fmt.Errorf("Failed to put state: %s", err)
+		return "", fmt.Errorf("failed to put state: %s", err)
 	}
 
 	// event 발생
 	err = ctx.GetStub().SetEvent("issuance", []byte(issuanceHash))
 	if err != nil {
-		return "", fmt.Errorf("Failed to set event: %s", err)
+		return "", fmt.Errorf("failed to set event: %s", err)
 	}
 
 	return issuanceHash, nil

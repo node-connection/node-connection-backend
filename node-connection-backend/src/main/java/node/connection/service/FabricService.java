@@ -1,16 +1,12 @@
 package node.connection.service;
 
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import node.connection._core.exception.ExceptionStatus;
 import node.connection._core.exception.client.BadRequestException;
 import node.connection._core.exception.client.NotFoundException;
 import node.connection._core.exception.server.ServerException;
 import node.connection._core.security.CustomUserDetails;
-import node.connection._core.utils.AccessControl;
 import node.connection._core.utils.Mapper;
-import node.connection.dto.root.request.FabricPeerAddRequest;
-import node.connection.dto.user.request.JoinDTO;
 import node.connection.entity.UserAccount;
 import node.connection.entity.constant.Role;
 import node.connection.hyperledger.FabricConfig;
@@ -23,17 +19,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 
 @Service
 @Slf4j
 public class FabricService {
-
-    private final AccessControl accessControl;
 
     private final FabricConfig fabricConfig;
 
@@ -66,10 +57,8 @@ public class FabricService {
     public FabricService(@Autowired FabricConfig fabricConfig,
                          @Autowired Mapper objectMapper,
                          @Autowired PasswordEncoder passwordEncoder,
-                         @Autowired UserAccountRepository userAccountRepository,
-                         @Autowired AccessControl accessControl
+                         @Autowired UserAccountRepository userAccountRepository
     ) {
-        this.accessControl = accessControl;
         this.fabricConfig = fabricConfig;
         this.objectMapper = objectMapper;
         this.passwordEncoder = passwordEncoder;

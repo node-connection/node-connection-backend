@@ -102,13 +102,8 @@ func generateDocumentID(payload string) string {
 
 // 등기부등본 생성
 func (s *SmartContract) CreateRegistryDocument(ctx contractapi.TransactionContextInterface, document RegistryDocument) (string, error) {
-	mspid, err := ctx.GetClientIdentity().GetMSPID()
-	if err != nil {
-		return "", fmt.Errorf("failed to get MSPID: %v", err)
-	}
-
-	if mspid != "RegistryMSP" {
-		return "", fmt.Errorf("access denied: only RegistryMSP can read the data")
+	if isRegistryMSP, err := isRegistryMSP(ctx); !isRegistryMSP {
+		return "", fmt.Errorf("only RegistryMSP can create a document: %v", err)
 	}
 
 	documentJSON, err := json.Marshal(document)
@@ -178,13 +173,8 @@ func (s *SmartContract) GetRegistryDocumentByAddress(ctx contractapi.Transaction
 }
 
 func (s *SmartContract) AddBuildingDescriptionToTitleSection(ctx contractapi.TransactionContextInterface, id string, buildingDesc BuildingDescription) error {
-	mspid, err := ctx.GetClientIdentity().GetMSPID()
-	if err != nil {
-		return fmt.Errorf("failed to get MSPID: %v", err)
-	}
-
-	if mspid != "RegistryMSP" {
-		return fmt.Errorf("access denied: only RegistryMSP can read the data")
+	if isRegistryMSP, err := isRegistryMSP(ctx); !isRegistryMSP {
+		return err
 	}
 
 	document, err := s.GetRegistryDocumentByID(ctx, id)
@@ -202,14 +192,10 @@ func (s *SmartContract) AddBuildingDescriptionToTitleSection(ctx contractapi.Tra
 }
 
 func (s *SmartContract) AddLandDescriptionToTitleSection(ctx contractapi.TransactionContextInterface, id string, landDesc LandDescription) error {
-	mspid, err := ctx.GetClientIdentity().GetMSPID()
-	if err != nil {
-		return fmt.Errorf("failed to get MSPID: %v", err)
+	if isRegistryMSP, err := isRegistryMSP(ctx); !isRegistryMSP {
+		return err
 	}
 
-	if mspid != "RegistryMSP" {
-		return fmt.Errorf("access denied: only RegistryMSP can read the data")
-	}
 	document, err := s.GetRegistryDocumentByID(ctx, id)
 	if err != nil {
 		return err
@@ -225,13 +211,8 @@ func (s *SmartContract) AddLandDescriptionToTitleSection(ctx contractapi.Transac
 }
 
 func (s *SmartContract) AddBuildingDescriptionToExclusivePart(ctx contractapi.TransactionContextInterface, id string, buildingDesc BuildingPartDescription) error {
-	mspid, err := ctx.GetClientIdentity().GetMSPID()
-	if err != nil {
-		return fmt.Errorf("failed to get MSPID: %v", err)
-	}
-
-	if mspid != "RegistryMSP" {
-		return fmt.Errorf("access denied: only RegistryMSP can read the data")
+	if isRegistryMSP, err := isRegistryMSP(ctx); !isRegistryMSP {
+		return err
 	}
 
 	document, err := s.GetRegistryDocumentByID(ctx, id)
@@ -249,13 +230,8 @@ func (s *SmartContract) AddBuildingDescriptionToExclusivePart(ctx contractapi.Tr
 }
 
 func (s *SmartContract) AddLandRightDescriptionToExclusivePart(ctx contractapi.TransactionContextInterface, id string, landRightDesc LandRightDescription) error {
-	mspid, err := ctx.GetClientIdentity().GetMSPID()
-	if err != nil {
-		return fmt.Errorf("failed to get MSPID: %v", err)
-	}
-
-	if mspid != "RegistryMSP" {
-		return fmt.Errorf("access denied: only RegistryMSP can read the data")
+	if isRegistryMSP, err := isRegistryMSP(ctx); !isRegistryMSP {
+		return err
 	}
 
 	document, err := s.GetRegistryDocumentByID(ctx, id)
@@ -273,13 +249,8 @@ func (s *SmartContract) AddLandRightDescriptionToExclusivePart(ctx contractapi.T
 }
 
 func (s *SmartContract) AddFirstSectionEntry(ctx contractapi.TransactionContextInterface, id string, firstSectionEntry FirstSection) error {
-	mspid, err := ctx.GetClientIdentity().GetMSPID()
-	if err != nil {
-		return fmt.Errorf("failed to get MSPID: %v", err)
-	}
-
-	if mspid != "RegistryMSP" {
-		return fmt.Errorf("access denied: only RegistryMSP can read the data")
+	if isRegistryMSP, err := isRegistryMSP(ctx); !isRegistryMSP {
+		return err
 	}
 
 	document, err := s.GetRegistryDocumentByID(ctx, id)
@@ -297,13 +268,8 @@ func (s *SmartContract) AddFirstSectionEntry(ctx contractapi.TransactionContextI
 }
 
 func (s *SmartContract) AddSecondSectionEntry(ctx contractapi.TransactionContextInterface, id string, secondSectionEntry SecondSection) error {
-	mspid, err := ctx.GetClientIdentity().GetMSPID()
-	if err != nil {
-		return fmt.Errorf("failed to get MSPID: %v", err)
-	}
-
-	if mspid != "RegistryMSP" {
-		return fmt.Errorf("access denied: only RegistryMSP can read the data")
+	if isRegistryMSP, err := isRegistryMSP(ctx); !isRegistryMSP {
+		return err
 	}
 
 	document, err := s.GetRegistryDocumentByID(ctx, id)
@@ -318,6 +284,15 @@ func (s *SmartContract) AddSecondSectionEntry(ctx contractapi.TransactionContext
 	}
 
 	return ctx.GetStub().PutState(id, documentJSON)
+}
+
+func isRegistryMSP(ctx contractapi.TransactionContextInterface) (bool, error) {
+	mspid, err := ctx.GetClientIdentity().GetMSPID()
+	if err != nil {
+		return false, fmt.Errorf("failed to get MSPID: %v", err)
+	}
+
+	return mspid == "RegistryMSP", nil
 }
 
 func main() {

@@ -20,6 +20,7 @@ import node.connection.entity.Court;
 import node.connection.entity.IssuanceHistory;
 import node.connection.entity.UserAccount;
 import node.connection.entity.constant.Role;
+import node.connection.entity.pk.IssuanceHistoryKey;
 import node.connection.hyperledger.FabricConfig;
 import node.connection.hyperledger.fabric.FabricConnector;
 import node.connection.hyperledger.fabric.FabricProposalResponse;
@@ -186,12 +187,16 @@ public class UserService {
 
         String issuanceHash = response.getPayload();
 
-        IssuanceHistory issuanceHistory = IssuanceHistory.builder()
-                .issuanceHash(issuanceHash)
-                .userAccount(userAccount)
-                .registryDocumentId(documentId)
+        IssuanceHistoryKey key = IssuanceHistoryKey.builder()
                 .address(request.address())
                 .detailAddress(request.detailAddress())
+                .issuanceHash(issuanceHash)
+                .build();
+
+        IssuanceHistory issuanceHistory = IssuanceHistory.builder()
+                .key(key)
+                .userAccount(userAccount)
+                .registryDocumentId(documentId)
                 .expiredAt(LocalDateTime.now().plusDays(90))
                 .build();
 
@@ -207,11 +212,11 @@ public class UserService {
         List<IssuanceHistory> histories = this.issuanceHistoryRepository.findAllByUserAccount(userAccount);
         return histories.stream()
                 .map(history -> new IssuanceHistoryDto(
-                        history.getIssuanceHash(),
-                        history.getAddress(),
-                        history.getDetailAddress(),
-                        history.getCreatedAt(),
-                        history.getExpiredAt()
+                        history.getKey().getIssuanceHash(),
+                        history.getKey().getAddress(),
+                        history.getKey().getDetailAddress(),
+                        history.getCreatedAt().plusHours(9),
+                        history.getExpiredAt().plusHours(9)
                 ))
                 .toList();
     }

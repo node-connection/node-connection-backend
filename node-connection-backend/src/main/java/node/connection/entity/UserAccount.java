@@ -50,7 +50,7 @@ public class UserAccount {
     @Column
     private String email;
 
-    @ManyToOne(cascade = CascadeType.ALL)
+    @ManyToOne(cascade = CascadeType.REFRESH)
     private Court court;
 
     @Column(columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP")
@@ -72,8 +72,17 @@ public class UserAccount {
         this.phoneNumber = phoneNumber;
         this.email = email;
         this.court = court;
-        this.createdAt = createdAt == null ? LocalDateTime.now() : createdAt;
-        this.updatedAt = updatedAt == null ? LocalDateTime.now() : updatedAt;
+    }
+
+    @PrePersist
+    protected void onCreated() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected  void onUpdated() {
+        this.updatedAt = LocalDateTime.now();
     }
 
     public static UserAccount of(String fabricId, String mspId, String secret, String enrollment) {

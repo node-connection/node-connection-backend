@@ -8,7 +8,6 @@ import lombok.extern.slf4j.Slf4j;
 import node.connection._core.exception.ExceptionStatus;
 import node.connection._core.exception.client.BadRequestException;
 import node.connection._core.exception.client.NotFoundException;
-import node.connection.dto.user.request.JoinDTO;
 import node.connection.entity.UserAccount;
 import node.connection.entity.constant.Role;
 import node.connection.repository.UserAccountRepository;
