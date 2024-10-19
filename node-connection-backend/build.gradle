@@ -31,28 +31,20 @@ repositories {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
-    implementation 'org.springframework.boot:spring-boot-starter-mail'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
     compileOnly 'org.projectlombok:lombok'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
-//    developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
-    runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.mysql:mysql-connector-j'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     // swagger dependency
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0'
-
-    // jwt module dependency
-    implementation 'com.nimbusds:nimbus-jose-jwt:9.37.2'
 
     // hyperledger fabric dependency
     implementation 'org.hyperledger.fabric:fabric-gateway-java:1.4.4'
@@ -62,15 +54,15 @@ dependencies {
     implementation(group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: '2.0.65.Final', classifier: 'osx-aarch_64')
     implementation(group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: '2.0.65.Final', classifier: 'linux-aarch_64')
     implementation(group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: '2.0.65.Final', classifier: 'osx-x86_64')
-
-    // hyperledger indy dependency
-    implementation("net.java.dev.jna:jna:5.12.1")
-    implementation("org.apache.commons:commons-lang3:3.12.0")
-    implementation("commons-io:commons-io:2.11.0")
     implementation("org.json:json:20231013")
-    implementation("org.hyperledger:indy:1.16.0")
 
     implementation("com.github.ben-manes.caffeine:caffeine:2.8.1")
+}
+
+bootJar {
+    layered {
+        enabled = true
+    }
 }
 
 tasks.named('test') {

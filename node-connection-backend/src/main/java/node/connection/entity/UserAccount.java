@@ -50,7 +50,7 @@ public class UserAccount {
     @Column
     private String email;
 
-    @ManyToOne(cascade = CascadeType.ALL)
+    @ManyToOne(cascade = CascadeType.REFRESH)
     private Court court;
 
     @Column(columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP")

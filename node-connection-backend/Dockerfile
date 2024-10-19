@@ -1,19 +1,16 @@
-FROM gradle:8.8-jdk17 AS build
-WORKDIR /app
+FROM eclipse-temurin:17-jdk-alpine AS builder
 
-COPY build.gradle settings.gradle ./
+WORKDIR application
+ARG JAR_FILE=build/libs/*.jar
+COPY ${JAR_FILE} application.jar
+RUN java -Djarmode=layertools -jar application.jar extract
 
-RUN gradle build --no-daemon --parallel --stacktrace || return 0
+FROM eclipse-temurin:17-jdk-alpine
+WORKDIR application
+ENV spring.profiles.active production
+COPY --from=builder application/dependencies ./
+COPY --from=builder application/spring-boot-loader ./
+COPY --from=builder application/snapshot-dependencies ./
+COPY --from=builder application/application ./
 
-COPY src ./src
-
-RUN gradle bootJar --no-daemon --parallel --stacktrace
-
-FROM openjdk:17-jdk-slim
-WORKDIR /app
-
-COPY --from=build /app/build/libs/*.jar app.jar
-
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
-
-EXPOSE 8083
+ENTRYPOINT ["java", "org.springframework.boot.loader.launch.JarLauncher"]

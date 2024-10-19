@@ -39,15 +39,13 @@ public class Court {
     private LocalDateTime updatedAt;
 
     @Builder
-    public Court(CourtKey key, String channelName, String phoneNumber, String address, String faxNumber, String registerCode, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public Court(CourtKey key, String channelName, String phoneNumber, String address, String faxNumber, String registerCode) {
         this.key = key;
         this.channelName = channelName;
         this.phoneNumber = phoneNumber;
         this.address = address;
         this.faxNumber = faxNumber;
         this.registerCode = registerCode;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
     }
 
     @PrePersist
