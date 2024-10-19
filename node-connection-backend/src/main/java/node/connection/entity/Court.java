@@ -58,7 +58,6 @@ public class Court {
 
     @PreUpdate
     protected  void onUpdated() {
-        this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }
 

@@ -3,7 +3,12 @@ export FABRIC_CA_CLIENT_HOME=${PWD}/organizations/peerOrganizations/registry.nod
 
 mkdir -p organizations/peerOrganizations/registry.node.connection/peers/peer1.registry.node.connection
 
-fabric-ca-client register --caname ca-registry --id.name peer1 --id.secret peer1pw --id.type peer --tls.certfiles ${PWD}/organizations/fabric-ca/registry/ca-cert.pem
+fabric-ca-client register \
+  --caname ca-registry \
+  --id.name peer1 \
+  --id.secret peer1pw \
+  --id.type peer \
+  --tls.certfiles ${PWD}/organizations/fabric-ca/registry/ca-cert.pem
 
 fabric-ca-client enroll \
   -u https://peer1:peer1pw@localhost:7054 \
